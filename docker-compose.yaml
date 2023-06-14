@@ -1,0 +1,10 @@
+version: "3.9"
+services:
+  surrealdb:
+    image: surrealdb/surrealdb
+    container_name: surrealdb
+    ports:
+      - "${DB_PORT}:8000"
+    volumes:
+      - ./data/database/:/data/
+    command: "start --log debug --user ${DB_USER} --pass ${DB_PASS} file:///data/"
