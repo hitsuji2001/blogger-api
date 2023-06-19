@@ -17,6 +17,8 @@ pub enum Error {
     DBCouldNotCreateUser,
     DBNamespaceNotFound,
     DBCouldNotSelectUser,
+    DBCouldNotDeleteUser,
+    DBCouldNotUpdateUser,
     ParseEnvFailedNoSuchFile,
     ParseEnvFailedNoSuchKey { key: String },
     ServerNoSuchIP,
@@ -62,6 +64,8 @@ impl From<DBError> for Error {
             DBError::TableCreateFailed => Error::DBCouldNotCreateTable,
             DBError::UserCreateFailed => Error::DBCouldNotCreateUser,
             DBError::UserSelectFailed => Error::DBCouldNotSelectUser,
+            DBError::UserDeleteFailed => Error::DBCouldNotDeleteUser,
+            DBError::UserUpdateFailed => Error::DBCouldNotUpdateUser,
         }
     }
 }

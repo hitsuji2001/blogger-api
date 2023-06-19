@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use surrealdb::sql::Thing;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
-    id: Option<String>,
+    id: Option<Thing>,
     first_name: String,
     last_name: String,
     email: String,

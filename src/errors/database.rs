@@ -6,5 +6,7 @@ pub enum DBError {
     TableCreateFailed,
     UserCreateFailed,
     UserSelectFailed,
+    UserDeleteFailed,
+    UserUpdateFailed,
     AuthFailed,
 }
