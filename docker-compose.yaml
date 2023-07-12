@@ -6,5 +6,16 @@ services:
     ports:
       - "${DB_PORT}:8000"
     volumes:
-      - ./data/database/:/data/
+      - ./data/surrealdb/:/data/
     command: "start --log debug --user ${DB_USER} --pass ${DB_PASS} file:///data/"
+  s3:
+    image: quay.io/minio/minio
+    container_name: minio
+    ports:
+      - "${MINIO_API_PORT}:9000"
+      - "${MINIO_CONSOLE_PORT}:9001"
+    env_file:
+      - "./.env"
+    volumes:
+      - ./data/minio/:/data/
+    command: "server /data --console-address ':9001'"

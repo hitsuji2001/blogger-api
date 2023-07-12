@@ -2,7 +2,7 @@ use axum::{routing::get, Json, Router};
 use serde_json::{json, Value};
 
 pub fn routes() -> Router {
-    return Router::new().route("/healthcheck", get(healthcheck));
+    return Router::new().route("/healthz", get(healthcheck));
 }
 
 async fn healthcheck() -> Result<Json<Value>, ()> {

@@ -1,8 +1,9 @@
 pub mod database;
 pub mod env;
+pub mod s3;
 pub mod server;
 
-use crate::errors::{database::DBError, env::EnvError, server::ServerError};
+use crate::errors::{database::DBError, env::EnvError, s3::S3Error, server::ServerError};
 
 use axum::{
     http::StatusCode,
@@ -21,9 +22,13 @@ pub enum Error {
     DBCouldNotUpdateUser,
     ParseEnvFailedNoSuchFile,
     ParseEnvFailedNoSuchKey { key: String },
+    ParseEnvFailedWrongFormat,
     ServerNoSuchIP,
     ServerCouldNotStart,
     ServerInvalidRegex,
+    ServerCouldNotParseUserForm,
+    MinioCouldNotInitBucket,
+    MinioCouldNotPutObject,
 }
 
 impl IntoResponse for Error {
@@ -41,6 +46,7 @@ impl From<EnvError> for Error {
         match err {
             EnvError::NoSuchFile => Error::ParseEnvFailedNoSuchFile,
             EnvError::NoSuchKey { key } => Error::ParseEnvFailedNoSuchKey { key },
+            EnvError::WrongFormat => Error::ParseEnvFailedWrongFormat,
         }
     }
 }
@@ -51,6 +57,7 @@ impl From<ServerError> for Error {
             ServerError::NoSuchIP => Error::ServerNoSuchIP,
             ServerError::InvalidRegex => Error::ServerInvalidRegex,
             ServerError::CouldNotStartServer => Error::ServerCouldNotStart,
+            ServerError::CouldNotParseUserForm => Error::ServerCouldNotParseUserForm,
         }
     }
 }
@@ -66,6 +73,15 @@ impl From<DBError> for Error {
             DBError::UserSelectFailed => Error::DBCouldNotSelectUser,
             DBError::UserDeleteFailed => Error::DBCouldNotDeleteUser,
             DBError::UserUpdateFailed => Error::DBCouldNotUpdateUser,
+        }
+    }
+}
+
+impl From<S3Error> for Error {
+    fn from(err: S3Error) -> Self {
+        match err {
+            S3Error::CouldNotInitBucket => Error::MinioCouldNotInitBucket,
+            S3Error::CouldNotPutObject => Error::MinioCouldNotPutObject,
         }
     }
 }
