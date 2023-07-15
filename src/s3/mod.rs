@@ -1,6 +1,6 @@
 pub mod config;
 
-use crate::errors::{s3::S3Error, Error};
+use crate::errors::Error;
 use crate::s3::config::S3Config;
 
 use s3::{bucket::Bucket, creds::Credentials, region::Region};
@@ -20,14 +20,7 @@ pub async fn get_bucket() -> Result<Bucket, Error> {
         endpoint: format!("http://{}:{}", config.ip, config.api_port),
     };
     let bucket = Bucket::new(&config.bucket_name, region, credentials)
-        .map_err(|err| {
-            log::error!(
-                "Could not instantiate bucket: {}.\n   --> Cause: {}",
-                &config.bucket_name,
-                err
-            );
-            S3Error::CouldNotInitBucket
-        })?
+        .map_err(|err| Error::MinioCouldNotInitBucket(config.bucket_name, err.to_string()))?
         .with_path_style();
 
     Ok(bucket)

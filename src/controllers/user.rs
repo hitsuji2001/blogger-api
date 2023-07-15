@@ -1,4 +1,4 @@
-use crate::errors::{database::DBError, Error};
+use crate::errors::Error;
 use crate::models::user::{User, UserForCreate};
 use crate::utils;
 
@@ -38,17 +38,18 @@ pub async fn create_user(
 
         let user: User = db
             .create(USER_TBL_NAME)
-            .content(UserForCreate::new(
-                &user.first_name,
-                &user.last_name,
-                &user.email,
-                &user.profile_pic_uri,
-            ))
+            .content(UserForCreate {
+                first_name: user.first_name,
+                last_name: user.last_name,
+                username: user.username,
+                email: user.email,
+                profile_pic_uri: user.profile_pic_uri,
+                avatar_as_bytes: Default::default(),
+                created_at: chrono::offset::Utc::now(),
+                updated_at: Default::default(),
+            })
             .await
-            .map_err(|err| {
-                log::error!("Failed to create user.\n    --> Cause: {}", err);
-                DBError::UserCreateFailed
-            })?;
+            .map_err(|err| Error::DBCouldNotCreateUser(err.to_string()))?;
         log::debug!("user: {:?}", user);
 
         Json(json!({
@@ -64,10 +65,10 @@ pub async fn create_user(
 
 // #[axum_macros::debug_handler]
 pub async fn list_users(State(db): State<Surreal<Client>>) -> Result<Json<Vec<User>>, Error> {
-    let users: Vec<User> = db.select(USER_TBL_NAME).await.map_err(|err| {
-        log::error!("Could not get all users.\n    --> Cause: {}", err);
-        DBError::UserSelectFailed
-    })?;
+    let users: Vec<User> = db
+        .select(USER_TBL_NAME)
+        .await
+        .map_err(|err| Error::DBCouldNotSelectAllUsers(err.to_string()))?;
 
     log::debug!("Successfully get all users");
     Ok(Json(users))
@@ -77,14 +78,10 @@ pub async fn get_user_with_id(
     State(db): State<Surreal<Client>>,
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
-    let user: User = db.select((USER_TBL_NAME, &id)).await.map_err(|err| {
-        log::error!(
-            "Could not get user with id: {}.\n    --> Cause: {}",
-            &id,
-            err
-        );
-        DBError::UserSelectFailed
-    })?;
+    let user: User = db
+        .select((USER_TBL_NAME, &id))
+        .await
+        .map_err(|err| Error::DBCouldNotSelectUser(id.clone(), err.to_string()))?;
     log::debug!("Successfully get user with id: {}. user: {:?}", &id, &user);
 
     Ok(Json(user))
@@ -109,14 +106,7 @@ pub async fn update_user(
         .patch(PatchOp::replace("/last_name", &user.last_name))
         .patch(PatchOp::replace("/profile_pic_uri", &file_path))
         .await
-        .map_err(|err| {
-            log::error!(
-                "Could not update user with id: {}.\n    --> Cause: {}",
-                &id,
-                err
-            );
-            DBError::UserUpdateFailed
-        })?;
+        .map_err(|err| Error::DBCouldNotUpdateUser(id.clone(), err.to_string()))?;
 
     log::debug!(
         "Successfully updated user with id: `{}`, changes: {:?}",
@@ -136,14 +126,10 @@ pub async fn delete_user(
     State(db): State<Surreal<Client>>,
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
-    let user: User = db.delete((USER_TBL_NAME, &id)).await.map_err(|err| {
-        log::error!(
-            "Could not delete user with id: {:?}\n    --> Cause: {}",
-            &id,
-            err
-        );
-        DBError::UserDeleteFailed
-    })?;
+    let user: User = db
+        .delete((USER_TBL_NAME, &id))
+        .await
+        .map_err(|err| Error::DBCouldNotDeleteUser(id.clone(), err.to_string()))?;
 
     log::debug!(
         "Successfully deleted user with: id `{}`. user: {:?}",

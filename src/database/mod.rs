@@ -2,7 +2,7 @@ pub mod config;
 pub mod create_tables;
 
 use crate::database::config::DatabaseConfig;
-use crate::errors::{database::DBError, Error};
+use crate::errors::Error;
 use surrealdb::{
     engine::remote::ws::{Client, Ws},
     opt::auth::Root,
@@ -15,10 +15,9 @@ pub async fn start() -> Result<Surreal<Client>, Error> {
         "Connecting to database server at: http://{}",
         config.address
     );
-    let db = Surreal::new::<Ws>(config.address).await.map_err(|error| {
-        log::error!("Couldn't connect to database.\n    --> Cause: {}", error);
-        DBError::CouldNotOpenWebSocket
-    })?;
+    let db = Surreal::new::<Ws>(config.address.clone())
+        .await
+        .map_err(|error| Error::DBCouldNotOpenWebSocket(config.address, error.to_string()))?;
     log::info!("Successfully connected to database server");
 
     log::info!("Attempting to log in to database server");
@@ -27,29 +26,28 @@ pub async fn start() -> Result<Surreal<Client>, Error> {
         password: &config.password,
     })
     .await
-    .map_err(|error| {
-        log::error!("Couldn't connect to database.\n    --> Cause: {}", error);
-        DBError::AuthFailed
-    })?;
+    .map_err(|error| Error::DBAuthenticationFailed(error.to_string()))?;
     log::info!("Successfully logged in to database server");
 
     db.use_ns(config.namespace.clone())
         .use_db(config.database.clone())
         .await
         .map_err(|error| {
-            log::error!(
-                "Couldn't connect to namespace: {}, in database: {}.\n    --> Cause: {}",
-                config.namespace,
-                config.database,
-                error
-            );
-            DBError::CouldNotConnectToNameSpace
+            Error::DBCouldNotConnectToNamespace(config.namespace.clone(), error.to_string())
         })?;
     log::info!(
         "Successfully connected to database with: {{ namespace: {}, database: {} }}",
-        config.namespace,
-        config.database
+        &config.namespace,
+        &config.database
     );
+    create_all_table(&db).await?;
 
     Ok(db)
+}
+
+async fn create_all_table(db: &Surreal<Client>) -> Result<(), Error> {
+    create_tables::user(&db).await?;
+    create_tables::article(&db).await?;
+
+    Ok(())
 }

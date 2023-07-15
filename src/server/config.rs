@@ -1,4 +1,4 @@
-use crate::errors::{server::ServerError, Error};
+use crate::errors::Error;
 use crate::utils::env;
 
 use std::net::{SocketAddr, ToSocketAddrs};
@@ -16,14 +16,7 @@ impl ServerConfig {
         );
         let addresses: Vec<_> = address
             .to_socket_addrs()
-            .map_err(|err| {
-                log::error!(
-                    "Failed to parse server address: {}.\n    --> Cause: {}",
-                    address,
-                    err
-                );
-                ServerError::NoSuchIP
-            })?
+            .map_err(|err| Error::ServerNoSuchIP(address.clone(), err.to_string()))?
             .collect();
         assert_eq!(
             addresses.len(),

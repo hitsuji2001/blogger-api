@@ -1,3 +1,4 @@
 pub mod app;
-pub mod healthcheck;
+pub mod auth;
+pub mod healthz;
 pub mod user;

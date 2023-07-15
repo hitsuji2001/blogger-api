@@ -1,4 +1,4 @@
-use crate::errors::{env::EnvError, Error};
+use crate::errors::Error;
 use crate::utils::env;
 
 pub struct S3Config {
@@ -20,16 +20,10 @@ impl S3Config {
             bucket_name: env::find_key_from_parser(&String::from("MINIO_BUCKET_NAME"), &env)?,
             console_port: env::find_key_from_parser(&String::from("MINIO_CONSOLE_PORT"), &env)?
                 .parse::<i32>()
-                .map_err(|error| {
-                    log::error!("Could not parse env file.\n    --> Cause: {}", error);
-                    EnvError::WrongFormat
-                })?,
+                .map_err(|error| Error::ParseEnvFailedWrongFormat(error.to_string()))?,
             api_port: env::find_key_from_parser(&String::from("MINIO_API_PORT"), &env)?
                 .parse::<i32>()
-                .map_err(|error| {
-                    log::error!("Could not parse env file.\n    --> Cause: {}", error);
-                    EnvError::WrongFormat
-                })?,
+                .map_err(|error| Error::ParseEnvFailedWrongFormat(error.to_string()))?,
             user: env::find_key_from_parser(&String::from("MINIO_ROOT_USER"), &env)?,
             password: env::find_key_from_parser(&String::from("MINIO_ROOT_PASSWORD"), &env)?,
             https: if env::find_key_from_parser(&String::from("MINIO_HTTPS"), &env)? == "false" {

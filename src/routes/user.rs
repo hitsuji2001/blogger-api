@@ -11,6 +11,7 @@ use axum::{
 use serde_json::Value;
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
+// TODO: Find the `right` way to pass database inside the route
 pub async fn routes() -> Result<Router, Error> {
     let database = database::start().await?;
 
