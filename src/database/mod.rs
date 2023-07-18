@@ -10,7 +10,8 @@ use surrealdb::{
 };
 
 pub async fn start() -> Result<Surreal<Client>, Error> {
-    let config = DatabaseConfig::parse_from_env_file(&String::from("./.env"))?;
+    let config = DatabaseConfig::parse_from_env_file()?;
+
     log::info!(
         "Connecting to database server at: http://{}",
         config.address

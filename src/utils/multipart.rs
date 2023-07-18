@@ -47,6 +47,7 @@ fn parse_string_from_u8(data: &Bytes) -> Result<String, Error> {
 
 // TODO: Add user context to place file of user in their own directory
 //       Ex: user_id/profile_pic/pic.png, user_id/blog_pic/pic.png
+// TODO: Find a way to prevent naming conflict when upload to s3
 pub async fn upload_to_s3(base_folder: &str, bytes: &Vec<u8>) -> Result<String, Error> {
     let file_name = format!("{}/{}", base_folder, chrono::offset::Utc::now());
     log::info!("Uploading file: `{}` to s3.", &file_name);

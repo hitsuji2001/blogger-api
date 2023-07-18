@@ -1,5 +1,4 @@
 use crate::errors::Error;
-use crate::utils::env;
 
 pub struct S3Config {
     pub ip: String,
@@ -12,21 +11,22 @@ pub struct S3Config {
 }
 
 impl S3Config {
-    pub fn parse_from_env_file(file_path: &str) -> Result<Self, Error> {
-        let env = env::get_env_parser_from_file(file_path)?;
-
+    pub fn parse_from_env_file() -> Result<Self, Error> {
         Ok(S3Config {
-            ip: env::find_key_from_parser(&String::from("MINIO_IP"), &env)?,
-            bucket_name: env::find_key_from_parser(&String::from("MINIO_BUCKET_NAME"), &env)?,
-            console_port: env::find_key_from_parser(&String::from("MINIO_CONSOLE_PORT"), &env)?
+            ip: std::env::var("MINIO_IP").expect("MINIO_IP must be set"),
+            bucket_name: std::env::var("MINIO_BUCKET_NAME").expect("MINIO_BUCKET_NAME must be set"),
+            console_port: std::env::var("MINIO_CONSOLE_PORT")
+                .expect("MINIO_CONSOLE_PORT must be set")
                 .parse::<i32>()
                 .map_err(|error| Error::ParseEnvFailedWrongFormat(error.to_string()))?,
-            api_port: env::find_key_from_parser(&String::from("MINIO_API_PORT"), &env)?
+            api_port: std::env::var("MINIO_API_PORT")
+                .expect("MINIO_API_PORT must be set")
                 .parse::<i32>()
                 .map_err(|error| Error::ParseEnvFailedWrongFormat(error.to_string()))?,
-            user: env::find_key_from_parser(&String::from("MINIO_ROOT_USER"), &env)?,
-            password: env::find_key_from_parser(&String::from("MINIO_ROOT_PASSWORD"), &env)?,
-            https: if env::find_key_from_parser(&String::from("MINIO_HTTPS"), &env)? == "false" {
+            user: std::env::var("MINIO_ROOT_USER").expect("MINIO_ROOT_USER must be set"),
+            password: std::env::var("MINIO_ROOT_PASSWORD")
+                .expect("MINIO_ROOT_PASSWORD must be set"),
+            https: if std::env::var("MINIO_HTTPS").expect("MINIO_HTTPS must be set") == "false" {
                 false
             } else {
                 true

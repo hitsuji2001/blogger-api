@@ -1,5 +1,4 @@
 use crate::errors::Error;
-use crate::utils::env;
 
 pub struct DatabaseConfig {
     pub address: String,
@@ -10,19 +9,17 @@ pub struct DatabaseConfig {
 }
 
 impl DatabaseConfig {
-    pub fn parse_from_env_file(file_path: &str) -> Result<Self, Error> {
-        let env = env::get_env_parser_from_file(file_path)?;
-
+    pub fn parse_from_env_file() -> Result<Self, Error> {
         Ok(DatabaseConfig {
             address: format!(
                 "{}:{}",
-                env::find_key_from_parser(&String::from("DB_HOST"), &env)?,
-                env::find_key_from_parser(&String::from("DB_PORT"), &env)?
+                std::env::var("DB_HOST").expect("DB_HOST must be set"),
+                std::env::var("DB_PORT").expect("DB_PORT must be set"),
             ),
-            username: env::find_key_from_parser(&String::from("DB_USER"), &env)?,
-            password: env::find_key_from_parser(&String::from("DB_PASS"), &env)?,
-            namespace: env::find_key_from_parser(&String::from("DB_NAMESPACE"), &env)?,
-            database: env::find_key_from_parser(&String::from("DB_DATABASE"), &env)?,
+            username: std::env::var("DB_USER").expect("DB_USER must be set"),
+            password: std::env::var("DB_PASS").expect("DB_PASS must be set"),
+            namespace: std::env::var("DB_NAMESPACE").expect("DB_NAMESPACE must be set"),
+            database: std::env::var("DB_DATABASE").expect("DB_DATABASE must be set"),
         })
     }
 }

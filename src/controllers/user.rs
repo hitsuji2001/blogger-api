@@ -1,5 +1,6 @@
 use crate::errors::Error;
 use crate::models::user::{User, UserForCreate};
+use crate::server::context::Context;
 use crate::utils;
 
 use axum::{
@@ -8,14 +9,15 @@ use axum::{
 };
 use serde::Deserialize;
 use serde_json::{json, Value};
-use std::str;
-use surrealdb::{engine::remote::ws::Client, opt::PatchOp, Surreal};
+use std::{str, sync::Arc};
+use surrealdb::opt::PatchOp;
 
 const USER_TBL_NAME: &str = "user";
 const USER_PROFILE_FOLDER: &str = "/user_profile_pictures";
 
+// #[axum_macros::debug_handler]
 pub async fn create_user(
-    State(db): State<Surreal<Client>>,
+    State(context): State<Arc<Context>>,
     payload: Multipart,
 ) -> Result<Json<Value>, Error> {
     log::info!("Controller::create_user");
@@ -36,7 +38,8 @@ pub async fn create_user(
             user.profile_pic_uri = Some(file_name);
         };
 
-        let user: User = db
+        let user: User = context
+            .db
             .create(USER_TBL_NAME)
             .content(UserForCreate {
                 first_name: user.first_name,
@@ -64,8 +67,9 @@ pub async fn create_user(
 }
 
 // #[axum_macros::debug_handler]
-pub async fn list_users(State(db): State<Surreal<Client>>) -> Result<Json<Vec<User>>, Error> {
-    let users: Vec<User> = db
+pub async fn list_users(State(context): State<Arc<Context>>) -> Result<Json<Vec<User>>, Error> {
+    let users: Vec<User> = context
+        .db
         .select(USER_TBL_NAME)
         .await
         .map_err(|err| Error::DBCouldNotSelectAllUsers(err.to_string()))?;
@@ -75,10 +79,11 @@ pub async fn list_users(State(db): State<Surreal<Client>>) -> Result<Json<Vec<Us
 }
 
 pub async fn get_user_with_id(
-    State(db): State<Surreal<Client>>,
+    State(context): State<Arc<Context>>,
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
-    let user: User = db
+    let user: User = context
+        .db
         .select((USER_TBL_NAME, &id))
         .await
         .map_err(|err| Error::DBCouldNotSelectUser(id.clone(), err.to_string()))?;
@@ -87,9 +92,9 @@ pub async fn get_user_with_id(
     Ok(Json(user))
 }
 
-#[axum_macros::debug_handler]
+// #[axum_macros::debug_handler]
 pub async fn update_user(
-    State(db): State<Surreal<Client>>,
+    State(context): State<Arc<Context>>,
     Path(id): Path<String>,
     payload: Multipart,
 ) -> Result<Json<Value>, Error> {
@@ -99,7 +104,8 @@ pub async fn update_user(
         file_path =
             utils::multipart::upload_to_s3(&USER_PROFILE_FOLDER.to_string(), &user_avatar).await?;
     };
-    let changes: Vec<OpChanges> = db
+    let changes: Vec<OpChanges> = context
+        .db
         .update((USER_TBL_NAME, &id))
         .patch(PatchOp::replace("/updated_at", chrono::offset::Utc::now()))
         .patch(PatchOp::replace("/first_name", &user.first_name))
@@ -121,12 +127,13 @@ pub async fn update_user(
     })))
 }
 
-#[axum_macros::debug_handler]
+// #[axum_macros::debug_handler]
 pub async fn delete_user(
-    State(db): State<Surreal<Client>>,
+    State(context): State<Arc<Context>>,
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
-    let user: User = db
+    let user: User = context
+        .db
         .delete((USER_TBL_NAME, &id))
         .await
         .map_err(|err| Error::DBCouldNotDeleteUser(id.clone(), err.to_string()))?;

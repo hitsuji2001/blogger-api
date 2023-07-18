@@ -1,22 +1,25 @@
 pub mod config;
+pub mod context;
 
 use crate::database;
 use crate::errors::Error;
 use crate::routes;
-use crate::server::config::ServerConfig;
+use crate::server::{config::ServerConfig, context::Context};
 
 use axum::Router;
+use std::sync::Arc;
 
 async fn get_all_routes() -> Result<Router, Error> {
-    Ok(Router::new().merge(routes::app::routes().await?))
+    let database = database::start().await?;
+    let context = Arc::new(Context { db: database });
+
+    Ok(Router::new().merge(routes::app::routes(context).await?))
 }
 
 pub async fn start() -> Result<(), Error> {
-    let config = ServerConfig::parse_from_env_file("./.env")?;
-    log::info!("Server listening on http://{:?}", config.address);
-    let db = database::start().await?;
-    database::create_tables::user(&db).await?;
+    let config = ServerConfig::parse_from_env_file()?;
 
+    log::info!("Server listening on http://{:?}", config.address);
     axum::Server::bind(&config.address)
         .serve(get_all_routes().await?.into_make_service())
         .await

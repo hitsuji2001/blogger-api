@@ -19,8 +19,6 @@ pub enum Error {
     DBCouldNotDeleteUser(String, String),
     DBCouldNotUpdateUser(String, String),
 
-    ParseEnvFailedNoSuchFile(String, String),
-    ParseEnvFailedNoSuchKey(String),
     ParseEnvFailedWrongFormat(String),
 
     ServerNoSuchIP(String, String),
@@ -70,14 +68,6 @@ impl IntoResponse for Error {
             Error::DBCouldNotUpdateUser(id, error) => {
                 status_code = StatusCode::NOT_FOUND;
                 (format!("Could not update user with id: `{}`", id), error)
-            }
-            Error::ParseEnvFailedNoSuchFile(file_name, error) => {
-                status_code = StatusCode::NOT_FOUND;
-                (format!("File not found: `{}`", file_name), error)
-            }
-            Error::ParseEnvFailedNoSuchKey(key) => {
-                status_code = StatusCode::NOT_FOUND;
-                (format!("No such key: `{}`", key), String::new())
             }
             Error::ParseEnvFailedWrongFormat(error) => {
                 ("Could not parse env file.".to_string(), error)

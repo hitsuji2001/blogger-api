@@ -6,7 +6,7 @@ use crate::s3::config::S3Config;
 use s3::{bucket::Bucket, creds::Credentials, region::Region};
 
 pub async fn get_bucket() -> Result<Bucket, Error> {
-    let config = S3Config::parse_from_env_file("./.env")?;
+    let config = S3Config::parse_from_env_file()?;
 
     let credentials = Credentials {
         access_key: Some(config.user),

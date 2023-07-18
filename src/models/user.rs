@@ -19,7 +19,7 @@ pub struct User {
 }
 
 // TODO: Add password to `UserForCreate` and a way to validate password
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Serialize)]
 pub struct UserForCreate {
     pub first_name: String,
     pub last_name: String,
@@ -59,7 +59,7 @@ impl UserForCreate {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct UserForLogin {
     pub email: String,
     pub password: String,
