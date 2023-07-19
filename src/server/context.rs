@@ -1,5 +1,7 @@
+use crate::models::user::User;
 use surrealdb::{engine::remote::ws::Client, Surreal};
 
 pub struct Context {
-    pub db: Surreal<Client>,
+    pub database: Surreal<Client>,
+    pub user: Option<User>,
 }

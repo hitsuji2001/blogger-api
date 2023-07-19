@@ -11,9 +11,13 @@ use std::sync::Arc;
 
 async fn get_all_routes() -> Result<Router, Error> {
     let database = database::start().await?;
-    let context = Arc::new(Context { db: database });
+    let context = Arc::new(Context {
+        database: database,
+        user: Default::default(),
+    });
+    let routers = Router::new().merge(routes::app::routes(context).await);
 
-    Ok(Router::new().merge(routes::app::routes(context).await?))
+    Ok(routers)
 }
 
 pub async fn start() -> Result<(), Error> {

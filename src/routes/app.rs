@@ -1,13 +1,15 @@
-use crate::errors::Error;
+use crate::middlewares;
 use crate::routes;
 use crate::server::context::Context;
 
-use axum::Router;
+use axum::{middleware, Router};
 use std::sync::Arc;
 
-pub async fn routes(context: Arc<Context>) -> Result<Router, Error> {
-    Ok(Router::new()
+pub async fn routes(context: Arc<Context>) -> Router {
+    Router::new()
+        .nest("/api", routes::user::routes(context.clone()).await)
+        .nest("/api", routes::logout::routes())
+        .route_layer(middleware::from_fn(middlewares::auth::require_auth))
         .nest("/api", routes::healthz::routes())
-        .nest("/api", routes::user::routes(context).await)
-        .nest("/api", routes::auth::routes().await))
+        .nest("/api", routes::login::routes(context))
 }

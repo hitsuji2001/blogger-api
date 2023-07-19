@@ -5,6 +5,8 @@ use regex::Regex;
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
 
+pub const USER_TBL_NAME: &str = "user";
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub id: Thing,

@@ -1,6 +1,8 @@
+mod auth;
 mod controllers;
 mod database;
 mod errors;
+mod middlewares;
 mod models;
 mod routes;
 mod s3;
@@ -19,13 +21,7 @@ async fn main() -> Result<(), Error> {
     simple_logger::SimpleLogger::new()
         .with_level(log::LevelFilter::Debug)
         .init()
-        .unwrap_or_else(|error| {
-            eprintln!(
-                "[ERROR]: Couldn't create `simple logger`.\n    --> Cause: {}",
-                error
-            );
-            panic!();
-        });
+        .expect("Couldn't create `simple logger`.");
     server::start().await?;
     Ok(())
 }

@@ -1,5 +1,5 @@
 use crate::errors::Error;
-use crate::models::user::{User, UserForCreate};
+use crate::models::user::{User, UserForCreate, USER_TBL_NAME};
 use crate::server::context::Context;
 use crate::utils;
 
@@ -12,7 +12,6 @@ use serde_json::{json, Value};
 use std::{str, sync::Arc};
 use surrealdb::opt::PatchOp;
 
-const USER_TBL_NAME: &str = "user";
 const USER_PROFILE_FOLDER: &str = "/user_profile_pictures";
 
 // #[axum_macros::debug_handler]
@@ -39,7 +38,7 @@ pub async fn create_user(
         };
 
         let user: User = context
-            .db
+            .database
             .create(USER_TBL_NAME)
             .content(UserForCreate {
                 first_name: user.first_name,
@@ -69,7 +68,7 @@ pub async fn create_user(
 // #[axum_macros::debug_handler]
 pub async fn list_users(State(context): State<Arc<Context>>) -> Result<Json<Vec<User>>, Error> {
     let users: Vec<User> = context
-        .db
+        .database
         .select(USER_TBL_NAME)
         .await
         .map_err(|err| Error::DBCouldNotSelectAllUsers(err.to_string()))?;
@@ -83,7 +82,7 @@ pub async fn get_user_with_id(
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
     let user: User = context
-        .db
+        .database
         .select((USER_TBL_NAME, &id))
         .await
         .map_err(|err| Error::DBCouldNotSelectUser(id.clone(), err.to_string()))?;
@@ -105,7 +104,7 @@ pub async fn update_user(
             utils::multipart::upload_to_s3(&USER_PROFILE_FOLDER.to_string(), &user_avatar).await?;
     };
     let changes: Vec<OpChanges> = context
-        .db
+        .database
         .update((USER_TBL_NAME, &id))
         .patch(PatchOp::replace("/updated_at", chrono::offset::Utc::now()))
         .patch(PatchOp::replace("/first_name", &user.first_name))
@@ -133,7 +132,7 @@ pub async fn delete_user(
     Path(id): Path<String>,
 ) -> Result<Json<User>, Error> {
     let user: User = context
-        .db
+        .database
         .delete((USER_TBL_NAME, &id))
         .await
         .map_err(|err| Error::DBCouldNotDeleteUser(id.clone(), err.to_string()))?;

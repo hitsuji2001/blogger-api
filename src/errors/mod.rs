@@ -25,9 +25,17 @@ pub enum Error {
     ServerCouldNotStart(String),
     ServerInvalidRegex(String),
     ServerCouldNotParseForm(String),
+    ServerDuplicateUserEmail,
+    ServerUnauthorizedUser,
+    ServerCouldNotAuthenticateUser,
 
     MinioCouldNotInitBucket(String, String),
     MinioCouldNotPutObject(String),
+
+    JWTTokenCreationError(String),
+    JWTTokenNotFoundOnHeader,
+    JWTTokenError(String),
+    JWTInvalidAuthHeader,
 }
 
 impl IntoResponse for Error {
@@ -86,12 +94,40 @@ impl IntoResponse for Error {
             Error::ServerCouldNotParseForm(error) => {
                 ("Could not parse form from payload".to_string(), error)
             }
+            Error::ServerDuplicateUserEmail => (
+                "Unreachable, there should not be more than one user with the same email"
+                    .to_string(),
+                "".to_string(),
+            ),
+            Error::ServerCouldNotAuthenticateUser => (
+                "Could not sign in with provided credentials".to_string(),
+                "".to_string(),
+            ),
+            Error::ServerUnauthorizedUser => {
+                status_code = StatusCode::UNAUTHORIZED;
+                ("Unauthorized user".to_string(), "".to_string())
+            }
             Error::MinioCouldNotInitBucket(name, error) => {
                 (format!("Could not initialize bucket: `{}`", name), error)
             }
             Error::MinioCouldNotPutObject(error) => {
                 ("Could not upload object to s3".to_string(), error)
             }
+            Error::JWTTokenCreationError(error) => {
+                ("Could not create JWT token".to_string(), error)
+            }
+            Error::JWTTokenNotFoundOnHeader => {
+                status_code = StatusCode::BAD_REQUEST;
+                (
+                    "Could not find JWT token on received headers".to_string(),
+                    "".to_string(),
+                )
+            }
+            Error::JWTInvalidAuthHeader => {
+                status_code = StatusCode::BAD_REQUEST;
+                ("Invalid JWT token".to_string(), "".to_string())
+            }
+            Error::JWTTokenError(error) => ("Invalid JWT token".to_string(), error),
         };
         log::error!("[ERROR]: {}.\n    --> Cause: {}", &message, &error);
         let body = Json(json!({
