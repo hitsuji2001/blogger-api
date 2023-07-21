@@ -1,21 +1,17 @@
 pub mod config;
 pub mod context;
 
-use crate::database;
+use crate::database::Database;
 use crate::errors::Error;
 use crate::routes;
-use crate::server::{config::ServerConfig, context::Context};
+use crate::server::config::ServerConfig;
 
 use axum::Router;
-use std::sync::Arc;
 
 async fn get_all_routes() -> Result<Router, Error> {
-    let database = database::start().await?;
-    let context = Arc::new(Context {
-        database: database,
-        user: Default::default(),
-    });
-    let routers = Router::new().merge(routes::app::routes(context).await);
+    let mut database = Database::new();
+    database.start().await?;
+    let routers = Router::new().merge(routes::app::routes(database.into()).await);
 
     Ok(routers)
 }

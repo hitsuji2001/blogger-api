@@ -1,15 +1,13 @@
-use crate::middlewares;
+use crate::database::Database;
 use crate::routes;
-use crate::server::context::Context;
 
-use axum::{middleware, Router};
+use axum::Router;
 use std::sync::Arc;
 
-pub async fn routes(context: Arc<Context>) -> Router {
+pub async fn routes(database: Arc<Database>) -> Router {
     Router::new()
-        .nest("/api", routes::user::routes(context.clone()).await)
+        .nest("/api", routes::user::routes(database.clone()).await)
         .nest("/api", routes::logout::routes())
-        .route_layer(middleware::from_fn(middlewares::auth::require_auth))
         .nest("/api", routes::healthz::routes())
-        .nest("/api", routes::login::routes(context))
+        .nest("/api", routes::login::routes(database))
 }

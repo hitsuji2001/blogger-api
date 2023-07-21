@@ -3,7 +3,6 @@ use crate::models::user::UserForCreate;
 use crate::s3;
 
 use axum::{body::Bytes, extract::Multipart};
-use std::str;
 
 pub async fn parse_user_for_create_from_multipart(
     mut payload: Multipart,
@@ -30,6 +29,10 @@ pub async fn parse_user_for_create_from_multipart(
                 user.avatar_as_bytes = Some(data.to_vec());
             } else if name == "username" {
                 user.username = parse_string_from_u8(&data)?;
+            } else if name == "is_admin" {
+                user.is_admin = parse_string_from_u8(&data)?
+                    .parse::<bool>()
+                    .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?;
             }
         }
     }
@@ -38,7 +41,7 @@ pub async fn parse_user_for_create_from_multipart(
 }
 
 fn parse_string_from_u8(data: &Bytes) -> Result<String, Error> {
-    let result = str::from_utf8(&data)
+    let result = std::str::from_utf8(&data)
         .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
         .to_string();
 

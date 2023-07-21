@@ -18,16 +18,14 @@ pub enum Error {
     DBCouldNotSelectUser(String, String),
     DBCouldNotDeleteUser(String, String),
     DBCouldNotUpdateUser(String, String),
+    DBDuplicateUserEmail,
 
     ParseEnvFailedWrongFormat(String),
 
     ServerNoSuchIP(String, String),
     ServerCouldNotStart(String),
-    ServerInvalidRegex(String),
     ServerCouldNotParseForm(String),
-    ServerDuplicateUserEmail,
     ServerUnauthorizedUser,
-    ServerCouldNotAuthenticateUser,
 
     MinioCouldNotInitBucket(String, String),
     MinioCouldNotPutObject(String),
@@ -77,6 +75,11 @@ impl IntoResponse for Error {
                 status_code = StatusCode::NOT_FOUND;
                 (format!("Could not update user with id: `{}`", id), error)
             }
+            Error::DBDuplicateUserEmail => (
+                "Unreachable, there should not be more than one user with the same email"
+                    .to_string(),
+                "".to_string(),
+            ),
             Error::ParseEnvFailedWrongFormat(error) => {
                 ("Could not parse env file.".to_string(), error)
             }
@@ -88,21 +91,9 @@ impl IntoResponse for Error {
                 )
             }
             Error::ServerCouldNotStart(error) => ("Could not start web server".to_string(), error),
-            Error::ServerInvalidRegex(error) => {
-                ("Could not parse regex correctly".to_string(), error)
-            }
             Error::ServerCouldNotParseForm(error) => {
                 ("Could not parse form from payload".to_string(), error)
             }
-            Error::ServerDuplicateUserEmail => (
-                "Unreachable, there should not be more than one user with the same email"
-                    .to_string(),
-                "".to_string(),
-            ),
-            Error::ServerCouldNotAuthenticateUser => (
-                "Could not sign in with provided credentials".to_string(),
-                "".to_string(),
-            ),
             Error::ServerUnauthorizedUser => {
                 status_code = StatusCode::UNAUTHORIZED;
                 ("Unauthorized user".to_string(), "".to_string())

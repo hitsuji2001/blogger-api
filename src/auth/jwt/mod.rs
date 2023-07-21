@@ -38,7 +38,7 @@ pub fn create_jwt(user: &Thing, role: &Role) -> Result<String, Error> {
     let config = JWTConfig::parse_from_env_file()?;
 
     let expriation = Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(config.expriation))
+        .checked_add_signed(chrono::Duration::minutes(config.expriation))
         .expect("valid timestamp")
         .timestamp();
     let claims = Claims {
@@ -63,6 +63,7 @@ pub async fn authorize(headers: &HeaderMap) -> Result<String, Error> {
                 &Validation::new(Algorithm::HS512),
             )
             .map_err(|err| Error::JWTTokenError(err.to_string()))?;
+
             Ok(decoded.claims.sub)
         }
         Err(_) => {

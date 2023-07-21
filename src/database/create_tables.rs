@@ -39,6 +39,7 @@ pub async fn user(db: &Surreal<Client>) -> Result<(), Error> {
         DEFINE FIELD profile_pic_uri    ON TABLE user TYPE string;
         DEFINE FIELD created_at         ON TABLE user TYPE datetime ASSERT $value != NONE;
         DEFINE FIELD updated_at         ON TABLE user TYPE datetime;
+        DEFINE FIELD is_admin           ON TABLE user TYPE bool;
         DEFINE FIELD articles           ON TABLE user TYPE array;
         DEFINE FIELD articles.*         ON TABLE user TYPE string ASSERT $value != NONE;
         DEFINE INDEX username_index     ON TABLE user COLUMNS username UNIQUE;

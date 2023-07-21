@@ -85,7 +85,6 @@ dependencies = [
  "httpc-test",
  "jsonwebtoken",
  "log",
- "regex",
  "rust-s3",
  "serde",
  "serde_json",

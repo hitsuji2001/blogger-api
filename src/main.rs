@@ -1,8 +1,6 @@
 mod auth;
-mod controllers;
 mod database;
 mod errors;
-mod middlewares;
 mod models;
 mod routes;
 mod s3;
