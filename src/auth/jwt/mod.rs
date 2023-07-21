@@ -14,7 +14,6 @@ const BEARER: &str = "Bearer ";
 
 pub enum Role {
     User,
-    #[allow(dead_code)]
     Admin,
 }
 

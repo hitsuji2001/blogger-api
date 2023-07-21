@@ -1,3 +1,5 @@
+use crate::utils::image::Image;
+
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use surrealdb::sql::Thing;
@@ -26,7 +28,7 @@ pub struct UserForCreate {
     pub username: String,
     pub email: String,
     pub is_admin: bool,
-    pub avatar_as_bytes: Option<Vec<u8>>,
+    pub avatar: Option<Image>,
     pub profile_pic_uri: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
@@ -40,7 +42,7 @@ impl UserForCreate {
             username: Default::default(),
             email: Default::default(),
             is_admin: false,
-            avatar_as_bytes: Default::default(),
+            avatar: Default::default(),
             profile_pic_uri: Default::default(),
             created_at: Default::default(),
             updated_at: Default::default(),

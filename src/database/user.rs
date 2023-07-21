@@ -44,6 +44,9 @@ impl Database {
         Ok(user)
     }
 
+    // FIXME: Change to only current logged in user can update itself
+    //        Right now any user can change data about any other user but data
+    //        only save on current logged in user
     pub async fn update_user_with_id(
         &self,
         id: &String,
@@ -51,10 +54,10 @@ impl Database {
         user: &UserForCreate,
     ) -> Result<(), Error> {
         let mut file_path = String::default();
-        if let Some(user_avatar) = &user.avatar_as_bytes {
-            file_path = utils::multipart::upload_to_s3(
+        if let Some(_) = &user.avatar {
+            file_path = utils::multipart::upload_user_image_to_s3(
+                user,
                 format!("{}/{}", context.user_id, USER_PROFILE_FOLDER).as_str(),
-                &user_avatar,
             )
             .await?;
         };

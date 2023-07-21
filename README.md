@@ -34,3 +34,5 @@ cargo run
 - [Crate s3](https://docs.rs/rust-s3/latest/s3/index.html)
 - [Crate surrealdb](https://docs.rs/surrealdb/1.0.0-beta.9+20230402/surrealdb/)
 - [SurrealDB Documentation](https://surrealdb.com/docs/)
+- [JWT authentication in Rust](https://blog.logrocket.com/jwt-authentication-in-rust/)
+- [Clean Code with Rust & Axum](https://www.propelauth.com/post/clean-code-with-rust-and-axum)
