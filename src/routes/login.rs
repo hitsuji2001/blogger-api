@@ -1,6 +1,6 @@
-use crate::auth::{jwt, jwt::Role};
+use crate::auth::jwt;
 use crate::database::Database;
-use crate::models::user::UserForLogin;
+use crate::models::user::{Role, UserForLogin};
 use crate::Error;
 
 use axum::{

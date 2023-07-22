@@ -53,22 +53,19 @@ impl Database {
         context: &Context,
         user: &UserForCreate,
     ) -> Result<(), Error> {
-        let mut file_path = String::default();
-        if let Some(_) = &user.avatar {
-            file_path = utils::multipart::upload_user_image_to_s3(
-                user,
-                format!("{}/{}", context.user_id, USER_PROFILE_FOLDER).as_str(),
-            )
-            .await?;
-        };
+        let latest_config = self.get_user_with_id(id).await?;
+        let current_info = filter_empty_field(user, &latest_config, &context).await?;
 
         let changes: Vec<OpChanges> = self
             .client
             .update((USER_TBL_NAME, id))
-            .patch(PatchOp::replace("/updated_at", chrono::offset::Utc::now()))
-            .patch(PatchOp::replace("/first_name", &user.first_name))
-            .patch(PatchOp::replace("/last_name", &user.last_name))
-            .patch(PatchOp::replace("/profile_pic_uri", &file_path))
+            .patch(PatchOp::replace("/updated_at", &current_info.updated_at))
+            .patch(PatchOp::replace("/first_name", &current_info.first_name))
+            .patch(PatchOp::replace("/last_name", &current_info.last_name))
+            .patch(PatchOp::replace(
+                "/profile_pic_uri",
+                &current_info.profile_pic_uri,
+            ))
             .await
             .map_err(|err| Error::DBCouldNotUpdateUser(id.clone(), err.to_string()))?;
         log::debug!(
@@ -108,7 +105,7 @@ impl Database {
         if users.len() == 0 {
             return Err(Error::DBCouldNotSelectUser(
                 email.to_string(),
-                "There's is no user with such email".to_string(),
+                "There's no user with such email".to_string(),
             ));
         } else if users.len() > 1 {
             return Err(Error::DBDuplicateUserEmail);
@@ -124,4 +121,47 @@ pub struct OpChanges {
     op: String,
     path: String,
     value: String,
+}
+
+async fn filter_empty_field(
+    current: &UserForCreate,
+    latest: &User,
+    context: &Context,
+) -> Result<UserForCreate, Error> {
+    if current.first_name == "" && current.last_name == "" && current.avatar == None {
+        return Err(Error::ServerEmptyFormFromUser);
+    }
+
+    let mut result = UserForCreate {
+        first_name: latest.first_name.clone(),
+        last_name: latest.last_name.clone(),
+        username: Default::default(),
+        email: Default::default(),
+        is_admin: latest.is_admin,
+        avatar: Default::default(),
+        profile_pic_uri: latest.profile_pic_uri.clone(),
+        created_at: latest.created_at,
+        updated_at: latest.updated_at,
+    };
+
+    if let Some(_) = &current.avatar {
+        result.profile_pic_uri = Some(
+            utils::multipart::upload_user_image_to_s3(
+                current,
+                format!("{}/{}", context.user_id, USER_PROFILE_FOLDER).as_str(),
+            )
+            .await?,
+        );
+    };
+
+    if current.first_name != "" {
+        result.first_name = current.first_name.clone();
+    }
+    if current.last_name != "" {
+        result.last_name = current.last_name.clone();
+    }
+
+    result.updated_at = Some(chrono::offset::Utc::now());
+
+    Ok(result)
 }

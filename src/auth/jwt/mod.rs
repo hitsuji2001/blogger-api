@@ -2,6 +2,7 @@ pub mod config;
 
 use crate::auth::jwt::config::JWTConfig;
 use crate::errors::Error;
+use crate::models::user::Role;
 
 use axum::http::HeaderMap;
 use chrono::Utc;
@@ -11,20 +12,6 @@ use surrealdb::sql::Thing;
 
 const AUTHORIZATION: &str = "Authorization";
 const BEARER: &str = "Bearer ";
-
-pub enum Role {
-    User,
-    Admin,
-}
-
-impl std::fmt::Display for Role {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Role::User => write!(f, "User"),
-            Role::Admin => write!(f, "Admin"),
-        }
-    }
-}
 
 #[derive(Debug, Deserialize, Serialize)]
 struct Claims {
@@ -52,7 +39,7 @@ pub fn create_jwt(user: &Thing, role: &Role) -> Result<String, Error> {
     Ok(token)
 }
 
-pub async fn authorize(headers: &HeaderMap) -> Result<String, Error> {
+pub async fn authorize(headers: &HeaderMap) -> Result<(String, String), Error> {
     let config = JWTConfig::parse_from_env_file()?;
     match parse_jwt_from_header(&headers) {
         Ok(jwt) => {
@@ -63,7 +50,7 @@ pub async fn authorize(headers: &HeaderMap) -> Result<String, Error> {
             )
             .map_err(|err| Error::JWTTokenError(err.to_string()))?;
 
-            Ok(decoded.claims.sub)
+            Ok((decoded.claims.sub, decoded.claims.role))
         }
         Err(_) => {
             return Err(Error::ServerUnauthorizedUser);

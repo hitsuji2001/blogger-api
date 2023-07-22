@@ -1,5 +1,6 @@
 use crate::database::Database;
 use crate::errors::Error;
+use crate::models::user::Role;
 use crate::server::context::Context;
 use crate::utils;
 
@@ -43,9 +44,15 @@ async fn create_user(
 
 // #[axum_macros::debug_handler]
 async fn list_users(
-    _context: Context,
+    context: Context,
     State(database): State<Arc<Database>>,
 ) -> Result<Response, Error> {
+    if context.user_role != Role::Admin {
+        return Err(Error::ServerPermissionDenied(String::from(
+            "Could not get other user information",
+        )));
+    }
+
     let users = database.get_all_users().await?;
     let body = Json(json!({
         "result": {
@@ -60,10 +67,16 @@ async fn list_users(
 }
 
 async fn get_user_with_id(
-    _context: Context,
+    context: Context,
     State(database): State<Arc<Database>>,
     Path(id): Path<String>,
 ) -> Result<Response, Error> {
+    if context.user_id != id && context.user_role != Role::Admin {
+        return Err(Error::ServerPermissionDenied(String::from(
+            "Could not get other user information",
+        )));
+    }
+
     let user = database.get_user_with_id(&id).await?;
     let body = Json(json!({
         "result": {
@@ -84,6 +97,11 @@ async fn update_user(
     Path(id): Path<String>,
     payload: Multipart,
 ) -> Result<Response, Error> {
+    if context.user_id != id && context.user_role != Role::Admin {
+        return Err(Error::ServerPermissionDenied(String::from(
+            "Could not update other user information",
+        )));
+    }
     let user_info = utils::multipart::parse_user_for_create_from_multipart(payload).await?;
     database
         .update_user_with_id(&id, &context, &user_info)
@@ -100,10 +118,15 @@ async fn update_user(
 }
 
 async fn delete_user(
-    _context: Context,
+    context: Context,
     State(database): State<Arc<Database>>,
     Path(id): Path<String>,
 ) -> Result<Response, Error> {
+    if context.user_id != id && context.user_role != Role::Admin {
+        return Err(Error::ServerPermissionDenied(String::from(
+            "Could not delete other user information",
+        )));
+    }
     let user = database.delete_user_with_id(&id).await?;
     let body = Json(json!({
         "result": {

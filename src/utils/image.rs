@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ImageType {
     PNG,
     JPEG,
@@ -33,7 +33,7 @@ impl std::fmt::Display for ImageType {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Image {
     pub file_type: ImageType,
     pub file_name: String,

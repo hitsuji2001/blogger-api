@@ -1,10 +1,12 @@
 use crate::auth::jwt;
 use crate::errors::Error;
+use crate::models::user::Role;
 
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
 
 pub struct Context {
     pub user_id: String,
+    pub user_role: Role,
 }
 
 #[async_trait]
@@ -20,8 +22,11 @@ where
             .and_then(|header| header.to_str().ok())
             .ok_or(Error::ServerUnauthorizedUser)?;
 
-        let id = jwt::authorize(&parts.headers).await?;
+        let (id, role) = jwt::authorize(&parts.headers).await?;
 
-        Ok(Context { user_id: id })
+        Ok(Context {
+            user_id: id,
+            user_role: Role::from_str(&role),
+        })
     }
 }

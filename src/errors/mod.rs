@@ -25,7 +25,9 @@ pub enum Error {
     ServerNoSuchIP(String, String),
     ServerCouldNotStart(String),
     ServerCouldNotParseForm(String),
+    ServerPermissionDenied(String),
     ServerUnauthorizedUser,
+    ServerEmptyFormFromUser,
 
     MinioCouldNotInitBucket(String, String),
     MinioCouldNotPutObject(String),
@@ -91,12 +93,23 @@ impl IntoResponse for Error {
                 )
             }
             Error::ServerCouldNotStart(error) => ("Could not start web server".to_string(), error),
+            Error::ServerPermissionDenied(error) => {
+                status_code = StatusCode::FORBIDDEN;
+                ("Could not perform action(s)".to_string(), error)
+            }
             Error::ServerCouldNotParseForm(error) => {
                 ("Could not parse form from payload".to_string(), error)
             }
             Error::ServerUnauthorizedUser => {
                 status_code = StatusCode::UNAUTHORIZED;
                 ("Unauthorized user".to_string(), "".to_string())
+            }
+            Error::ServerEmptyFormFromUser => {
+                status_code = StatusCode::BAD_REQUEST;
+                (
+                    "User sent empty form, ignoring update".to_string(),
+                    "".to_string(),
+                )
             }
             Error::MinioCouldNotInitBucket(name, error) => {
                 (format!("Could not initialize bucket: `{}`", name), error)
