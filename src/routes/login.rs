@@ -14,9 +14,9 @@ use serde_json::json;
 use std::sync::Arc;
 
 pub fn routes(context: Arc<Database>) -> Router {
-    return Router::new()
+    Router::new()
         .route("/login", post(login))
-        .with_state(context);
+        .with_state(context)
 }
 
 #[axum_macros::debug_handler]
@@ -25,7 +25,7 @@ async fn login(
     payload: Json<UserForLogin>,
 ) -> Result<Response, Error> {
     let user = database.get_user_with_email(&payload.email).await?;
-    let token = if user.is_admin == false {
+    let token = if !user.is_admin {
         jwt::create_jwt(&user.id, &Role::User)?
     } else {
         jwt::create_jwt(&user.id, &Role::Admin)?

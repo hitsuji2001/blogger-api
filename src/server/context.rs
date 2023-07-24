@@ -10,6 +10,24 @@ pub struct Context {
     pub user_role: Role,
 }
 
+impl Context {
+    pub fn check_permissions(&self, id: Option<Thing>) -> Result<(), Error> {
+        if let Some(id) = id {
+            if self.user_id != id && self.user_role != Role::Admin {
+                return Err(Error::ServerPermissionDenied(String::from(
+                    "Could not perform action(s)",
+                )));
+            }
+        } else if self.user_role != Role::Admin {
+            return Err(Error::ServerPermissionDenied(String::from(
+                "Could not perform action(s)",
+            )));
+        }
+
+        Ok(())
+    }
+}
+
 #[async_trait]
 impl<S> FromRequestParts<S> for Context
 where

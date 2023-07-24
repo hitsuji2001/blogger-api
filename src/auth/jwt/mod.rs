@@ -42,7 +42,7 @@ pub fn create_jwt(user: &Thing, role: &Role) -> Result<String, Error> {
 pub async fn authorize(headers: &HeaderMap) -> Result<(Thing, String), Error> {
     let config = JWTConfig::parse_from_env_file()?;
 
-    match parse_jwt_from_header(&headers) {
+    match parse_jwt_from_header(headers) {
         Ok(jwt) => {
             let decoded = jsonwebtoken::decode::<Claims>(
                 &jwt,
@@ -50,13 +50,11 @@ pub async fn authorize(headers: &HeaderMap) -> Result<(Thing, String), Error> {
                 &Validation::new(Algorithm::HS512),
             )
             .map_err(|err| Error::JWTTokenError(err.to_string()))?;
-            let claim = decoded.claims.sub.split(":").collect::<Vec<&str>>();
+            let claim = decoded.claims.sub.split(':').collect::<Vec<&str>>();
 
             Ok((Thing::from((claim[0], claim[1])), decoded.claims.role))
         }
-        Err(_) => {
-            return Err(Error::ServerUnauthorizedUser);
-        }
+        Err(_) => Err(Error::ServerUnauthorizedUser),
     }
 }
 

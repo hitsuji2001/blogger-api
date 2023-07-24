@@ -76,7 +76,7 @@ pub async fn parse_user_for_create(mut payload: Multipart) -> Result<UserForCrea
 }
 
 fn parse_string_from_u8(data: &Bytes) -> Result<String, Error> {
-    let result = std::str::from_utf8(&data)
+    let result = std::str::from_utf8(data)
         .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
         .to_string();
 
@@ -98,7 +98,7 @@ pub async fn upload_user_image_to_s3(
             ))
             .get(0..32)
             .expect("Unreachable, SHA-256 should provide more than 32 chracter"),
-            avatar.file_type.to_string()
+            avatar.file_type
         );
         log::info!("Uploading file: `{}` to s3.", &file_name);
         s3::get_bucket()
@@ -110,9 +110,9 @@ pub async fn upload_user_image_to_s3(
 
         Ok(file_name)
     } else {
-        return Err(Error::ServerCouldNotParseForm(String::from(
+        Err(Error::ServerCouldNotParseForm(String::from(
             "Unreachable, User avatar is null",
-        )));
+        )))
     }
 }
 

@@ -2,21 +2,20 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub enum ImageType {
-    PNG,
-    JPEG,
-    JPG,
-    GIF,
-    NONE,
+    Png,
+    Jpeg,
+    Jpg,
+    Gif,
 }
 
 impl ImageType {
     pub fn from_str(string: &str) -> Self {
         match string {
-            "image/png" => ImageType::PNG,
-            "image/jpg" => ImageType::JPG,
-            "image/jpeg" => ImageType::JPEG,
-            "image/gif" => ImageType::GIF,
-            _ => ImageType::NONE,
+            "image/png" => ImageType::Png,
+            "image/jpg" => ImageType::Jpg,
+            "image/jpeg" => ImageType::Jpeg,
+            "image/gif" => ImageType::Gif,
+            _ => ImageType::Png,
         }
     }
 }
@@ -24,11 +23,10 @@ impl ImageType {
 impl std::fmt::Display for ImageType {
     fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
         match self {
-            ImageType::PNG => write!(formatter, "png"),
-            ImageType::JPEG => write!(formatter, "jpeg"),
-            ImageType::JPG => write!(formatter, "jpg"),
-            ImageType::GIF => write!(formatter, "gif"),
-            ImageType::NONE => write!(formatter, "wtf"),
+            ImageType::Png => write!(formatter, "png"),
+            ImageType::Jpeg => write!(formatter, "jpeg"),
+            ImageType::Jpg => write!(formatter, "jpg"),
+            ImageType::Gif => write!(formatter, "gif"),
         }
     }
 }
@@ -43,7 +41,7 @@ pub struct Image {
 impl Image {
     pub fn new() -> Self {
         Image {
-            file_type: ImageType::NONE,
+            file_type: ImageType::Png,
             file_name: String::new(),
             data: Default::default(),
         }

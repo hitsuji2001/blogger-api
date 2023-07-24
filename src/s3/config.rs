@@ -26,11 +26,7 @@ impl S3Config {
             user: std::env::var("MINIO_ROOT_USER").expect("MINIO_ROOT_USER must be set"),
             password: std::env::var("MINIO_ROOT_PASSWORD")
                 .expect("MINIO_ROOT_PASSWORD must be set"),
-            https: if std::env::var("MINIO_HTTPS").expect("MINIO_HTTPS must be set") == "false" {
-                false
-            } else {
-                true
-            },
+            https: std::env::var("MINIO_HTTPS").expect("MINIO_HTTPS must be set") != "false",
         })
     }
 }

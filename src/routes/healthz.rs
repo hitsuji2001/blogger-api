@@ -7,7 +7,7 @@ use axum::{
 use serde_json::json;
 
 pub fn routes() -> Router {
-    return Router::new().route("/healthz", get(healthcheck));
+    Router::new().route("/healthz", get(healthcheck))
 }
 
 // TODO: Redefine this function to check for the `alive` state

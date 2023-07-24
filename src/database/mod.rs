@@ -34,7 +34,7 @@ impl Database {
             .map_err(|error| Error::DBCouldNotOpenWebSocket(config.address, error.to_string()))?;
         log::info!("Successfully connected to database server");
 
-        log::info!("Attempting to log in to database server");
+        log::debug!("Attempting to log in to database server");
         self.client
             .signin(Root {
                 username: &config.username,

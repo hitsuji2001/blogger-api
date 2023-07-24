@@ -1,6 +1,5 @@
 use crate::database::{user::USER_TBL_NAME, Database};
 use crate::errors::Error;
-use crate::models::user::Role;
 use crate::routes;
 use crate::server::context::Context;
 use crate::utils;
@@ -50,11 +49,7 @@ async fn list_users(
     context: Context,
     State(database): State<Arc<Database>>,
 ) -> Result<Response, Error> {
-    if context.user_role != Role::Admin {
-        return Err(Error::ServerPermissionDenied(String::from(
-            "Could not get other user information",
-        )));
-    }
+    context.check_permissions(None)?;
 
     let users = database.get_all_users().await?;
     let body = Json(json!({
@@ -75,11 +70,7 @@ async fn get_user_with_id(
     Path(id): Path<String>,
 ) -> Result<Response, Error> {
     let id = Thing::from((USER_TBL_NAME, id.as_str()));
-    if context.user_id != id && context.user_role != Role::Admin {
-        return Err(Error::ServerPermissionDenied(String::from(
-            "Could not get other user information",
-        )));
-    }
+    context.check_permissions(Some(id.clone()))?;
 
     let user = database.get_user_with_id(&id).await?;
     let body = Json(json!({
@@ -102,11 +93,8 @@ async fn update_user(
     payload: Multipart,
 ) -> Result<Response, Error> {
     let id = Thing::from((USER_TBL_NAME, id.as_str()));
-    if context.user_id != id && context.user_role != Role::Admin {
-        return Err(Error::ServerPermissionDenied(String::from(
-            "Could not update other user information",
-        )));
-    }
+    context.check_permissions(Some(id.clone()))?;
+
     let user_info = utils::multipart::parse_user_for_create(payload).await?;
     database
         .update_user_with_id(&id, &context, &user_info)
@@ -128,11 +116,8 @@ async fn delete_user(
     Path(id): Path<String>,
 ) -> Result<Response, Error> {
     let id = Thing::from((USER_TBL_NAME, id.as_str()));
-    if context.user_id != id && context.user_role != Role::Admin {
-        return Err(Error::ServerPermissionDenied(String::from(
-            "Could not delete other user information",
-        )));
-    }
+    context.check_permissions(Some(id.clone()))?;
+
     let user = database.delete_user_with_id(&id).await?;
     let body = Json(json!({
         "result": {

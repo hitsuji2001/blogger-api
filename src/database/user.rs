@@ -51,12 +51,12 @@ impl Database {
         user: &UserForCreate,
     ) -> Result<(), Error> {
         let latest_config = self.get_user_with_id(id).await?;
-        let current_info = filter_empty_field(user, &latest_config, &context).await?;
+        let current_info = filter_empty_field(user, &latest_config, context).await?;
 
         let changes: Vec<OpChanges<String>> = self
             .client
             .update((id.tb.clone(), id.id.clone()))
-            .patch(PatchOp::replace("/updated_at", &current_info.updated_at))
+            .patch(PatchOp::replace("/updated_at", current_info.updated_at))
             .patch(PatchOp::replace("/first_name", &current_info.first_name))
             .patch(PatchOp::replace("/last_name", &current_info.last_name))
             .patch(PatchOp::replace(
@@ -99,7 +99,7 @@ impl Database {
             .take(0)
             .map_err(|err| Error::DBCouldNotSelectUser(email.to_string(), err.to_string()))?;
 
-        if users.len() == 0 {
+        if users.is_empty() {
             return Err(Error::DBCouldNotSelectUser(
                 email.to_string(),
                 "There's no user with such email".to_string(),
@@ -144,7 +144,7 @@ async fn filter_empty_field(
     latest: &User,
     context: &Context,
 ) -> Result<UserForCreate, Error> {
-    if current.first_name == "" && current.last_name == "" && current.avatar == None {
+    if current.first_name.is_empty() && current.last_name.is_empty() && current.avatar.is_none() {
         return Err(Error::ServerEmptyFormFromUser);
     }
 
@@ -160,7 +160,7 @@ async fn filter_empty_field(
         updated_at: latest.updated_at,
     };
 
-    if let Some(_) = &current.avatar {
+    if current.avatar.is_some() {
         result.profile_pic_uri = Some(
             utils::multipart::upload_user_image_to_s3(
                 current,
@@ -170,10 +170,10 @@ async fn filter_empty_field(
         );
     };
 
-    if current.first_name != "" {
+    if !current.first_name.is_empty() {
         result.first_name = current.first_name.clone();
     }
-    if current.last_name != "" {
+    if !current.last_name.is_empty() {
         result.last_name = current.last_name.clone();
     }
 

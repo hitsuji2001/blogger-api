@@ -55,7 +55,7 @@ impl IntoResponse for Error {
                 )
             }
             Error::DBCouldNotCreateTable(name, error) => (
-                format!("Could not create table {}", name.to_string()),
+                format!("Could not create table {}", name),
                 error,
             ),
             Error::DBCouldNotCreateContent(error) => {
@@ -139,13 +139,13 @@ impl IntoResponse for Error {
         let body = Json(json!({
             "result": {
                 "success": false,
-                "error": format!("{}", status_code.to_string()),
+                "error": format!("{}", status_code),
                 "reason": format!("{}", error),
                 "message": format!("{}", message),
             },
         }));
 
-        let response = (status_code, body).into_response();
-        return response;
+        
+        (status_code, body).into_response()
     }
 }
