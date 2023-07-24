@@ -3,9 +3,10 @@ use crate::errors::Error;
 use crate::models::user::Role;
 
 use axum::{async_trait, extract::FromRequestParts, http::request::Parts};
+use surrealdb::sql::Thing;
 
 pub struct Context {
-    pub user_id: String,
+    pub user_id: Thing,
     pub user_role: Role,
 }
 

@@ -1,5 +1,6 @@
+pub mod article;
 pub mod config;
-pub mod create_tables;
+pub mod event;
 pub mod user;
 
 use crate::database::config::DatabaseConfig;
@@ -56,13 +57,14 @@ impl Database {
             &config.database
         );
         self.create_all_table().await?;
+        self.create_events().await?;
 
         Ok(())
     }
 
     async fn create_all_table(&self) -> Result<(), Error> {
-        create_tables::user(&self.client).await?;
-        create_tables::article(&self.client).await?;
+        self.create_user_table().await?;
+        self.create_article_table().await?;
 
         Ok(())
     }

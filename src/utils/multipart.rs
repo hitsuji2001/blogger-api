@@ -1,14 +1,13 @@
 use crate::errors::Error;
-use crate::models::user::UserForCreate;
+use crate::models::{article::ArticleForCreate, user::UserForCreate};
 use crate::s3;
+use crate::server::context::Context;
 use crate::utils::image::{Image, ImageType};
 
 use axum::{body::Bytes, extract::Multipart};
 
 // TODO: Find a better way to parse multipart form to struct
-pub async fn parse_user_for_create_from_multipart(
-    mut payload: Multipart,
-) -> Result<UserForCreate, Error> {
+pub async fn parse_user_for_create(mut payload: Multipart) -> Result<UserForCreate, Error> {
     let mut user = UserForCreate::new();
     while let Some(field) = payload
         .next_field()
@@ -115,4 +114,65 @@ pub async fn upload_user_image_to_s3(
             "Unreachable, User avatar is null",
         )));
     }
+}
+
+pub async fn parse_article_for_create(
+    mut payload: Multipart,
+    context: &Context,
+) -> Result<ArticleForCreate, Error> {
+    let mut article = ArticleForCreate::new();
+    article.user_id = context.user_id.clone();
+
+    while let Some(field) = payload
+        .next_field()
+        .await
+        .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
+    {
+        if let Some(field_name) = field.name() {
+            let name = field_name.to_string();
+            let data = field
+                .bytes()
+                .await
+                .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?;
+            if name == "title" {
+                article.title = parse_string_from_u8(&data)?;
+            }
+        }
+    }
+
+    Ok(article)
+}
+
+pub async fn upload_html_to_s3(
+    article: &ArticleForCreate,
+    base_folder: &str,
+) -> Result<String, Error> {
+    let file_name = format!(
+        "{}/{}.html",
+        base_folder,
+        sha256::digest(format!(
+            "{}/{}/{}",
+            article.user_id,
+            article.title,
+            chrono::offset::Utc::now()
+        ))
+        .get(0..32)
+        .expect("Unreachable, SHA-256 should provide more than 32 chracter"),
+    );
+
+    log::info!("Uploading file: `{}` to s3.", &file_name);
+    s3::get_bucket()
+        .await?
+        .put_object_with_content_type(
+            &file_name,
+            format!(
+                "<!doctype html><html><head><title>{}</title></head><body><p>Placeholder</p></body></html>",
+                article.title
+            ).as_bytes(),
+            "text/html"
+        )
+        .await
+        .map_err(|err| Error::MinioCouldNotPutObject(err.to_string()))?;
+
+    Ok(file_name)
 }

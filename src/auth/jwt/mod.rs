@@ -28,7 +28,7 @@ pub fn create_jwt(user: &Thing, role: &Role) -> Result<String, Error> {
         .expect("valid timestamp")
         .timestamp();
     let claims = Claims {
-        sub: user.id.to_string(),
+        sub: user.to_string(),
         role: role.to_string(),
         exp: expriation as usize,
     };
@@ -39,8 +39,9 @@ pub fn create_jwt(user: &Thing, role: &Role) -> Result<String, Error> {
     Ok(token)
 }
 
-pub async fn authorize(headers: &HeaderMap) -> Result<(String, String), Error> {
+pub async fn authorize(headers: &HeaderMap) -> Result<(Thing, String), Error> {
     let config = JWTConfig::parse_from_env_file()?;
+
     match parse_jwt_from_header(&headers) {
         Ok(jwt) => {
             let decoded = jsonwebtoken::decode::<Claims>(
@@ -49,8 +50,9 @@ pub async fn authorize(headers: &HeaderMap) -> Result<(String, String), Error> {
                 &Validation::new(Algorithm::HS512),
             )
             .map_err(|err| Error::JWTTokenError(err.to_string()))?;
+            let claim = decoded.claims.sub.split(":").collect::<Vec<&str>>();
 
-            Ok((decoded.claims.sub, decoded.claims.role))
+            Ok((Thing::from((claim[0], claim[1])), decoded.claims.role))
         }
         Err(_) => {
             return Err(Error::ServerUnauthorizedUser);

@@ -11,7 +11,7 @@ use axum::Router;
 async fn get_all_routes() -> Result<Router, Error> {
     let mut database = Database::new();
     database.start().await?;
-    let routers = Router::new().merge(routes::app::routes(database.into()).await);
+    let routers = Router::new().merge(routes::app::routes(database.into()));
 
     Ok(routers)
 }

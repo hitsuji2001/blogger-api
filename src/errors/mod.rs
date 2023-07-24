@@ -13,7 +13,7 @@ pub enum Error {
     DBAuthenticationFailed(String),
     DBCouldNotCreateTable(String, String),
     DBCouldNotConnectToNamespace(String, String),
-    DBCouldNotCreateUser(String),
+    DBCouldNotCreateContent(String),
     DBCouldNotSelectAllUsers(String),
     DBCouldNotSelectUser(String, String),
     DBCouldNotDeleteUser(String, String),
@@ -58,7 +58,9 @@ impl IntoResponse for Error {
                 format!("Could not create table {}", name.to_string()),
                 error,
             ),
-            Error::DBCouldNotCreateUser(error) => ("Failed to create user.".to_string(), error),
+            Error::DBCouldNotCreateContent(error) => {
+                ("Failed to create content.".to_string(), error)
+            }
             Error::DBCouldNotConnectToNamespace(name, error) => {
                 (format!("Could not connect to namespace: `{}`", name), error)
             }
