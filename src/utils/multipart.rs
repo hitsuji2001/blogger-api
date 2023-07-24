@@ -30,6 +30,9 @@ pub async fn parse_user_for_create(mut payload: Multipart) -> Result<UserForCrea
                 }
                 if let Some(file_type) = file_type {
                     avatar.file_type = ImageType::from_str(file_type);
+                    if !avatar.is_supported_image_type() {
+                        return Err(Error::ServerUnsupportedMediaType(file_type.to_string()));
+                    }
                 }
                 avatar.data = field
                     .bytes()

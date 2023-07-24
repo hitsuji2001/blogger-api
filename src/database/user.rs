@@ -17,7 +17,7 @@ impl Database {
             .create(USER_TBL_NAME)
             .content(info)
             .await
-            .map_err(|err| Error::DBCouldNotCreateContent(err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotCreateRecord(err.to_string()))?;
 
         Ok(user.id.to_string())
     }
@@ -27,7 +27,7 @@ impl Database {
             .client
             .select(USER_TBL_NAME)
             .await
-            .map_err(|err| Error::DBCouldNotSelectAllUsers(err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotSelectAllRecords(err.to_string()))?;
         log::debug!("Successfully get all users");
 
         Ok(users)
@@ -38,7 +38,7 @@ impl Database {
             .client
             .select((id.tb.clone(), id.id.clone()))
             .await
-            .map_err(|err| Error::DBCouldNotSelectUser(id.to_string(), err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotSelectRecord(id.to_string(), err.to_string()))?;
         log::debug!("Successfully get user with id: {}. user: {:?}", &id, &user);
 
         Ok(user)
@@ -64,7 +64,7 @@ impl Database {
                 &current_info.profile_pic_uri,
             ))
             .await
-            .map_err(|err| Error::DBCouldNotUpdateUser(id.to_string(), err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotUpdateRecord(id.to_string(), err.to_string()))?;
         log::debug!(
             "Successfully updated user with id: `{}`, changes: {:?}",
             &id,
@@ -78,7 +78,7 @@ impl Database {
             .client
             .delete((id.tb.clone(), id.id.clone()))
             .await
-            .map_err(|err| Error::DBCouldNotDeleteUser(id.to_string(), err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotDeleteRecord(id.to_string(), err.to_string()))?;
 
         log::debug!(
             "Successfully deleted user with: id `{}`. user: {:?}",
@@ -95,12 +95,12 @@ impl Database {
             .client
             .query(sql)
             .await
-            .map_err(|err| Error::DBCouldNotSelectUser(email.to_string(), err.to_string()))?
+            .map_err(|err| Error::DBCouldNotSelectRecord(email.to_string(), err.to_string()))?
             .take(0)
-            .map_err(|err| Error::DBCouldNotSelectUser(email.to_string(), err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotSelectRecord(email.to_string(), err.to_string()))?;
 
         if users.is_empty() {
-            return Err(Error::DBCouldNotSelectUser(
+            return Err(Error::DBCouldNotSelectRecord(
                 email.to_string(),
                 "There's no user with such email".to_string(),
             ));

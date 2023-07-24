@@ -13,11 +13,11 @@ pub enum Error {
     DBAuthenticationFailed(String),
     DBCouldNotCreateTable(String, String),
     DBCouldNotConnectToNamespace(String, String),
-    DBCouldNotCreateContent(String),
-    DBCouldNotSelectAllUsers(String),
-    DBCouldNotSelectUser(String, String),
-    DBCouldNotDeleteUser(String, String),
-    DBCouldNotUpdateUser(String, String),
+    DBCouldNotSelectAllRecords(String),
+    DBCouldNotCreateRecord(String),
+    DBCouldNotSelectRecord(String, String),
+    DBCouldNotDeleteRecord(String, String),
+    DBCouldNotUpdateRecord(String, String),
     DBDuplicateUserEmail,
 
     ParseEnvFailedWrongFormat(String),
@@ -28,6 +28,7 @@ pub enum Error {
     ServerPermissionDenied(String),
     ServerUnauthorizedUser,
     ServerEmptyFormFromUser,
+    ServerUnsupportedMediaType(String),
 
     MinioCouldNotInitBucket(String, String),
     MinioCouldNotPutObject(String),
@@ -54,30 +55,27 @@ impl IntoResponse for Error {
                     error,
                 )
             }
-            Error::DBCouldNotCreateTable(name, error) => (
-                format!("Could not create table {}", name),
-                error,
-            ),
-            Error::DBCouldNotCreateContent(error) => {
-                ("Failed to create content.".to_string(), error)
+            Error::DBCouldNotCreateTable(name, error) => {
+                (format!("Could not create table {}", name), error)
             }
+            Error::DBCouldNotCreateRecord(error) => ("Failed to create record.".to_string(), error),
             Error::DBCouldNotConnectToNamespace(name, error) => {
                 (format!("Could not connect to namespace: `{}`", name), error)
             }
-            Error::DBCouldNotSelectAllUsers(error) => {
-                ("Could not query all user".to_string(), error)
+            Error::DBCouldNotSelectAllRecords(error) => {
+                ("Could not query all record".to_string(), error)
             }
-            Error::DBCouldNotSelectUser(id, error) => {
+            Error::DBCouldNotSelectRecord(id, error) => {
                 status_code = StatusCode::NOT_FOUND;
-                (format!("Could not find user with id: `{}`", id), error)
+                (format!("Could not find record with id: `{}`", id), error)
             }
-            Error::DBCouldNotDeleteUser(id, error) => {
+            Error::DBCouldNotDeleteRecord(id, error) => {
                 status_code = StatusCode::NOT_FOUND;
-                (format!("Could not delete user with id: `{}`", id), error)
+                (format!("Could not delete record with id: `{}`", id), error)
             }
-            Error::DBCouldNotUpdateUser(id, error) => {
+            Error::DBCouldNotUpdateRecord(id, error) => {
                 status_code = StatusCode::NOT_FOUND;
-                (format!("Could not update user with id: `{}`", id), error)
+                (format!("Could not update record with id: `{}`", id), error)
             }
             Error::DBDuplicateUserEmail => (
                 "Unreachable, there should not be more than one user with the same email"
@@ -113,6 +111,13 @@ impl IntoResponse for Error {
                     "".to_string(),
                 )
             }
+            Error::ServerUnsupportedMediaType(media_type) => {
+                status_code = StatusCode::UNSUPPORTED_MEDIA_TYPE;
+                (
+                    format!("Unsupported media type: `{}`", media_type),
+                    "".to_string(),
+                )
+            }
             Error::MinioCouldNotInitBucket(name, error) => {
                 (format!("Could not initialize bucket: `{}`", name), error)
             }
@@ -145,7 +150,6 @@ impl IntoResponse for Error {
             },
         }));
 
-        
         (status_code, body).into_response()
     }
 }

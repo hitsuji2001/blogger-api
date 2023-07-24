@@ -6,6 +6,7 @@ pub enum ImageType {
     Jpeg,
     Jpg,
     Gif,
+    Unsupported,
 }
 
 impl ImageType {
@@ -15,7 +16,7 @@ impl ImageType {
             "image/jpg" => ImageType::Jpg,
             "image/jpeg" => ImageType::Jpeg,
             "image/gif" => ImageType::Gif,
-            _ => ImageType::Png,
+            _ => ImageType::Unsupported,
         }
     }
 }
@@ -27,6 +28,7 @@ impl std::fmt::Display for ImageType {
             ImageType::Jpeg => write!(formatter, "jpeg"),
             ImageType::Jpg => write!(formatter, "jpg"),
             ImageType::Gif => write!(formatter, "gif"),
+            ImageType::Unsupported => write!(formatter, "???"),
         }
     }
 }
@@ -41,9 +43,13 @@ pub struct Image {
 impl Image {
     pub fn new() -> Self {
         Image {
-            file_type: ImageType::Png,
+            file_type: ImageType::Unsupported,
             file_name: String::new(),
             data: Default::default(),
         }
+    }
+
+    pub fn is_supported_image_type(&self) -> bool {
+        self.file_type != ImageType::Unsupported
     }
 }

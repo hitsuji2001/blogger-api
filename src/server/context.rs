@@ -11,17 +11,18 @@ pub struct Context {
 }
 
 impl Context {
-    pub fn check_permissions(&self, id: Option<Thing>) -> Result<(), Error> {
+    pub fn check_permissions(&self, id: Option<Thing>, is_admin_only: bool) -> Result<(), Error> {
+        if is_admin_only && self.user_role != Role::Admin {
+            return Err(Error::ServerPermissionDenied(String::from(
+                "Could not perform action(s)",
+            )));
+        }
         if let Some(id) = id {
             if self.user_id != id && self.user_role != Role::Admin {
                 return Err(Error::ServerPermissionDenied(String::from(
                     "Could not perform action(s)",
                 )));
             }
-        } else if self.user_role != Role::Admin {
-            return Err(Error::ServerPermissionDenied(String::from(
-                "Could not perform action(s)",
-            )));
         }
 
         Ok(())

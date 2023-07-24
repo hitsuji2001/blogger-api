@@ -1,10 +1,13 @@
 use crate::database::Database;
 use crate::errors::Error;
 use crate::models::article::{Article, ArticleForCreate};
+use crate::server::context::Context;
 use crate::utils;
 
+use surrealdb::sql::Thing;
+
 const ARTICLE_FOLDER: &str = "articles";
-const ARTICLE_TBL_NAME: &str = "article";
+pub const ARTICLE_TBL_NAME: &str = "article";
 
 impl Database {
     pub async fn create_article_table(&self) -> Result<(), Error> {
@@ -43,8 +46,61 @@ impl Database {
             .create(ARTICLE_TBL_NAME)
             .content(info)
             .await
-            .map_err(|err| Error::DBCouldNotCreateContent(err.to_string()))?;
+            .map_err(|err| Error::DBCouldNotCreateRecord(err.to_string()))?;
 
         Ok(article.id.to_string())
+    }
+
+    pub async fn list_articles_for_user(&self, context: &Context) -> Result<Vec<Article>, Error> {
+        let sql = format!(
+            "SELECT * FROM article WHERE (SELECT ->wrote->article FROM user WHERE id = {})",
+            context.user_id
+        );
+
+        let articles: Vec<Article> = self
+            .client
+            .query(sql)
+            .await
+            .map_err(|err| {
+                Error::DBCouldNotSelectRecord(context.user_id.to_string(), err.to_string())
+            })?
+            .take(0)
+            .map_err(|err| {
+                Error::DBCouldNotSelectRecord(context.user_id.to_string(), err.to_string())
+            })?;
+
+        Ok(articles)
+    }
+
+    pub async fn get_article_with_id(&self, id: &Thing) -> Result<Article, Error> {
+        let article: Article = self
+            .client
+            .select((id.tb.clone(), id.id.clone()))
+            .await
+            .map_err(|err| Error::DBCouldNotSelectRecord(id.to_string(), err.to_string()))?;
+
+        log::debug!(
+            "Successfully get article with id: {}. article: {:?}",
+            &id,
+            &article
+        );
+
+        Ok(article)
+    }
+
+    pub async fn delete_article_with_id(&self, id: &Thing) -> Result<Article, Error> {
+        let article: Article = self
+            .client
+            .delete((id.tb.clone(), id.id.clone()))
+            .await
+            .map_err(|err| Error::DBCouldNotDeleteRecord(id.to_string(), err.to_string()))?;
+
+        log::debug!(
+            "Successfully delete article with id: {}. article: {:?}",
+            &id,
+            &article
+        );
+
+        Ok(article)
     }
 }

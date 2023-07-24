@@ -1,6 +1,5 @@
-use crate::database::{user::USER_TBL_NAME, Database};
+use crate::database::{article::ARTICLE_TBL_NAME, user::USER_TBL_NAME, Database};
 use crate::errors::Error;
-use crate::models::user::Role;
 use crate::server::context::Context;
 use crate::utils;
 
@@ -35,11 +34,7 @@ async fn create_article(
     payload: Multipart,
 ) -> Result<Response, Error> {
     let id = Thing::from((USER_TBL_NAME, id.as_str()));
-    if context.user_id != id && context.user_role != Role::Admin {
-        return Err(Error::ServerPermissionDenied(String::from(
-            "Could not access other user information",
-        )));
-    }
+    context.check_permissions(Some(id), false)?;
 
     let mut article = utils::multipart::parse_article_for_create(payload, &context).await?;
     let article_id = database.create_article(&mut article).await?;
@@ -57,14 +52,21 @@ async fn create_article(
 }
 
 async fn list_articles(
-    _context: Context,
-    State(_database): State<Arc<Database>>,
+    context: Context,
+    Path(id): Path<String>,
+    State(database): State<Arc<Database>>,
 ) -> Result<Response, Error> {
+    let id = Thing::from((USER_TBL_NAME, id.as_str()));
+    context.check_permissions(Some(id), false)?;
+
+    let articles = database.list_articles_for_user(&context).await?;
+
     let body = Json(json!({
         "result": {
             "success": true,
-            "message": "Successfully list articles.",
+            "message": format!("Successfully list articles for user `{}`", context.user_id)
         },
+        "articles": articles
     }));
     let res = (StatusCode::OK, body).into_response();
 
@@ -72,15 +74,22 @@ async fn list_articles(
 }
 
 async fn get_article_with_id(
-    _context: Context,
-    State(_database): State<Arc<Database>>,
-    Path(_id): Path<String>,
+    context: Context,
+    State(database): State<Arc<Database>>,
+    Path((_user_id, article_id)): Path<(String, String)>,
 ) -> Result<Response, Error> {
+    context.check_permissions(None, false)?;
+
+    let article = database
+        .get_article_with_id(&Thing::from((ARTICLE_TBL_NAME, article_id.as_str())))
+        .await?;
+
     let body = Json(json!({
         "result": {
             "success": true,
             "message": "Successfully get article.",
         },
+        "article": article
     }));
     let res = (StatusCode::CREATED, body).into_response();
 
@@ -90,7 +99,7 @@ async fn get_article_with_id(
 async fn update_article(
     _context: Context,
     State(_database): State<Arc<Database>>,
-    Path(_id): Path<String>,
+    Path((_user_id, _article_id)): Path<(String, String)>,
     _payload: Multipart,
 ) -> Result<Response, Error> {
     let body = Json(json!({
@@ -105,15 +114,23 @@ async fn update_article(
 }
 
 async fn delete_article(
-    _context: Context,
-    State(_database): State<Arc<Database>>,
-    Path(_id): Path<String>,
+    context: Context,
+    State(database): State<Arc<Database>>,
+    Path((user_id, article_id)): Path<(String, String)>,
 ) -> Result<Response, Error> {
+    let user_id = Thing::from((USER_TBL_NAME, user_id.as_str()));
+    context.check_permissions(Some(user_id), false)?;
+
+    let article = database
+        .delete_article_with_id(&Thing::from((ARTICLE_TBL_NAME, article_id.as_str())))
+        .await?;
+
     let body = Json(json!({
         "result": {
             "success": true,
             "message": "Successfully delete article.",
         },
+        "article": article
     }));
     let res = (StatusCode::OK, body).into_response();
 
