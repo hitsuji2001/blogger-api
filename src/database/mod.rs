@@ -1,4 +1,5 @@
 pub mod article;
+pub mod comment;
 pub mod config;
 pub mod event;
 pub mod user;
@@ -64,6 +65,7 @@ impl Database {
 
     async fn create_all_table(&self) -> Result<(), Error> {
         self.create_user_table().await?;
+        self.create_comment_table().await?;
         self.create_article_table().await?;
 
         Ok(())

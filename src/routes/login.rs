@@ -1,7 +1,7 @@
 use crate::auth::jwt;
 use crate::database::Database;
+use crate::errors::Error;
 use crate::models::user::{Role, UserForLogin};
-use crate::Error;
 
 use axum::{
     extract::State,

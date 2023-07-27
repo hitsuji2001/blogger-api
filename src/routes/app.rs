@@ -9,5 +9,6 @@ pub fn routes(database: Arc<Database>) -> Router {
         .nest("/api", routes::user::routes(database.clone()))
         .nest("/api", routes::logout::routes())
         .nest("/api", routes::healthz::routes())
-        .nest("/api", routes::login::routes(database))
+        .nest("/api", routes::login::routes(database.clone()))
+        .nest("/api", routes::article::routes(database))
 }

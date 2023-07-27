@@ -13,22 +13,26 @@ impl Database {
     pub async fn create_article_table(&self) -> Result<(), Error> {
         let sql = r#"
             DEFINE TABLE article SCHEMAFULL;
-            DEFINE FIELD user_id              ON TABLE article TYPE record(user)   ASSERT $value != NONE;
-            DEFINE FIELD title                ON TABLE article TYPE string         ASSERT $value != NONE;
-            DEFINE FIELD public               ON TABLE article TYPE bool           ASSERT $value != NONE;
+            DEFINE FIELD user_id              ON TABLE article TYPE record(user)    ASSERT $value != NONE;
+            DEFINE FIELD title                ON TABLE article TYPE string          ASSERT $value != NONE;
+            DEFINE FIELD public               ON TABLE article TYPE bool            ASSERT $value != NONE;
             DEFINE FIELD tags                 ON TABLE article TYPE array;
             DEFINE FIELD tags.*               ON TABLE article TYPE string;
             DEFINE FIELD article_uri          ON TABLE article TYPE string;
+            DEFINE FIELD comments             ON TABLE article TYPE array;
+            DEFINE FIELD comments.*           ON TABLE article TYPE record(comment) ASSERT $value != NONE;
+            DEFINE FIELD liked_by             ON TABLE article TYPE array;
+            DEFINE FIELD liked_by.*           ON TABLE article TYPE record(user)    ASSERT $value != NONE;
             DEFINE FIELD images_uri_list      ON TABLE article TYPE array;
             DEFINE FIELD images_uri_list.*    ON TABLE article TYPE string;
-            DEFINE FIELD created_at           ON TABLE article TYPE datetime       ASSERT $value != NONE;
+            DEFINE FIELD created_at           ON TABLE article TYPE datetime        ASSERT $value != NONE;
             DEFINE FIELD updated_at           ON TABLE article TYPE datetime;
         "#;
 
         self.client.query(sql).await.map_err(|err| {
-            Error::DBCouldNotCreateTable(String::from("article"), err.to_string())
+            Error::DBCouldNotCreateTable(ARTICLE_TBL_NAME.to_string(), err.to_string())
         })?;
-        log::info!("Create `article` table successfully");
+        log::info!("Successfully create table: `{}`", ARTICLE_TBL_NAME);
 
         Ok(())
     }

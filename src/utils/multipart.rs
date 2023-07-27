@@ -6,6 +6,41 @@ use crate::utils::image::{Image, ImageType};
 
 use axum::{body::Bytes, extract::Multipart};
 
+pub async fn parse_article_for_update(
+    mut payload: Multipart,
+    article_uri: &String,
+) -> Result<(), Error> {
+    while let Some(field) = payload
+        .next_field()
+        .await
+        .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
+    {
+        if let Some(field_name) = field.name() {
+            let name = field_name.to_string();
+            let file_type = field.content_type();
+            if name == "file" {
+                if let Some(file_type) = file_type {
+                    if file_type != "text/html" {
+                        return Err(Error::ServerUnsupportedMediaType(file_type.to_string()));
+                    }
+                }
+                let data = field
+                    .bytes()
+                    .await
+                    .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?;
+
+                s3::get_bucket()
+                    .await?
+                    .put_object_with_content_type(article_uri, &data, "text/html")
+                    .await
+                    .map_err(|err| Error::MinioCouldNotPutObject(err.to_string()))?;
+            }
+        }
+    }
+
+    Ok(())
+}
+
 // TODO: Find a better way to parse multipart form to struct
 pub async fn parse_user_for_create(mut payload: Multipart) -> Result<UserForCreate, Error> {
     let mut user = UserForCreate::new();

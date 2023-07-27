@@ -1,4 +1,4 @@
-use crate::Error;
+use crate::errors::Error;
 
 use axum::{routing::get, Router};
 

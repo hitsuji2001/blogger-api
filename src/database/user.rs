@@ -10,6 +10,32 @@ pub const USER_TBL_NAME: &str = "user";
 const USER_PROFILE_FOLDER: &str = "user_profile_pictures";
 
 impl Database {
+    pub async fn create_user_table(&self) -> Result<(), Error> {
+        let sql = r#"
+            DEFINE TABLE user SCHEMAFULL;
+            DEFINE FIELD username           ON TABLE user TYPE string   ASSERT $value != NONE;
+            DEFINE FIELD first_name         ON TABLE user TYPE string   ASSERT $value != NONE;
+            DEFINE FIELD last_name          ON TABLE user TYPE string   ASSERT $value != NONE;
+            DEFINE FIELD email              ON TABLE user TYPE string   ASSERT $value != NONE AND is::email($value);
+            DEFINE FIELD profile_pic_uri    ON TABLE user TYPE string;
+            DEFINE FIELD created_at         ON TABLE user TYPE datetime ASSERT $value != NONE;
+            DEFINE FIELD updated_at         ON TABLE user TYPE datetime;
+            DEFINE FIELD is_admin           ON TABLE user TYPE bool;
+            DEFINE FIELD articles           ON TABLE user TYPE array;
+            DEFINE FIELD articles.*         ON TABLE user TYPE record(article) ASSERT $value != NONE;
+            DEFINE INDEX article_index      ON TABLE user COLUMNS articles.* UNIQUE;
+            DEFINE INDEX username_index     ON TABLE user COLUMNS username UNIQUE;
+            DEFINE INDEX user_email_index   ON TABLE user COLUMNS email UNIQUE;
+        "#;
+
+        self.client.query(sql).await.map_err(|err| {
+            Error::DBCouldNotCreateTable(USER_TBL_NAME.to_string(), err.to_string())
+        })?;
+        log::info!("Successfully create table: `{}`", USER_TBL_NAME);
+
+        Ok(())
+    }
+
     pub async fn create_user(&self, info: &mut UserForCreate) -> Result<String, Error> {
         info.created_at = chrono::offset::Utc::now();
         let user: User = self
@@ -110,35 +136,8 @@ impl Database {
 
         Ok(users[0].clone())
     }
-
-    // BUG: Find a way to connect articles with user
-    pub async fn create_user_table(&self) -> Result<(), Error> {
-        let sql = r#"
-            DEFINE TABLE user SCHEMAFULL;
-            DEFINE FIELD username           ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD first_name         ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD last_name          ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD email              ON TABLE user TYPE string   ASSERT $value != NONE AND is::email($value);
-            DEFINE FIELD profile_pic_uri    ON TABLE user TYPE string;
-            DEFINE FIELD created_at         ON TABLE user TYPE datetime ASSERT $value != NONE;
-            DEFINE FIELD updated_at         ON TABLE user TYPE datetime;
-            DEFINE FIELD is_admin           ON TABLE user TYPE bool;
-            DEFINE FIELD articles           ON TABLE user TYPE array;
-            DEFINE FIELD articles.*         ON TABLE user TYPE record(article) ASSERT $value != NONE;
-            DEFINE INDEX article_index      ON TABLE user COLUMNS articles.* UNIQUE;
-            DEFINE INDEX username_index     ON TABLE user COLUMNS username UNIQUE;
-            DEFINE INDEX user_email_index   ON TABLE user COLUMNS email UNIQUE;
-        "#;
-
-        self.client
-            .query(sql)
-            .await
-            .map_err(|err| Error::DBCouldNotCreateTable(String::from("user"), err.to_string()))?;
-        log::info!("Create `user` table successfully");
-
-        Ok(())
-    }
 }
+
 async fn filter_empty_field(
     current: &UserForCreate,
     latest: &User,

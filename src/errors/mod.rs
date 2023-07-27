@@ -18,6 +18,7 @@ pub enum Error {
     DBCouldNotSelectRecord(String, String),
     DBCouldNotDeleteRecord(String, String),
     DBCouldNotUpdateRecord(String, String),
+    DBCouldNotCreateEvent(String),
     DBDuplicateUserEmail,
 
     ParseEnvFailedWrongFormat(String),
@@ -77,6 +78,7 @@ impl IntoResponse for Error {
                 status_code = StatusCode::NOT_FOUND;
                 (format!("Could not update record with id: `{}`", id), error)
             }
+            Error::DBCouldNotCreateEvent(error) => ("Could not create event".to_string(), error),
             Error::DBDuplicateUserEmail => (
                 "Unreachable, there should not be more than one user with the same email"
                     .to_string(),
