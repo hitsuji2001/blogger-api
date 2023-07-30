@@ -2,11 +2,11 @@ use crate::database::Database;
 use crate::errors::Error;
 use crate::models::article::{Article, ArticleForCreate};
 use crate::server::context::Context;
-use crate::utils;
+use crate::utils::OpChanges;
 
-use surrealdb::sql::Thing;
+use surrealdb::{opt::PatchOp, sql::Thing};
 
-const ARTICLE_FOLDER: &str = "articles";
+pub const ARTICLE_FOLDER: &str = "articles";
 pub const ARTICLE_TBL_NAME: &str = "article";
 
 impl Database {
@@ -37,13 +37,9 @@ impl Database {
         Ok(())
     }
 
-    pub async fn create_article(&self, info: &mut ArticleForCreate) -> Result<String, Error> {
+    pub async fn create_article(&self, info: &mut ArticleForCreate) -> Result<Thing, Error> {
         info.created_at = chrono::offset::Utc::now();
-        info.article_uri = utils::multipart::upload_html_to_s3(
-            info,
-            format!("{}/{}", info.user_id, ARTICLE_FOLDER).as_str(),
-        )
-        .await?;
+        info.article_uri = String::from("");
 
         let article: Article = self
             .client
@@ -52,7 +48,7 @@ impl Database {
             .await
             .map_err(|err| Error::DBCouldNotCreateRecord(err.to_string()))?;
 
-        Ok(article.id.to_string())
+        Ok(article.id)
     }
 
     pub async fn list_articles_for_user(&self, context: &Context) -> Result<Vec<Article>, Error> {
@@ -69,9 +65,7 @@ impl Database {
                 Error::DBCouldNotSelectRecord(context.user_id.to_string(), err.to_string())
             })?
             .take(0)
-            .map_err(|err| {
-                Error::DBCouldNotSelectRecord(context.user_id.to_string(), err.to_string())
-            })?;
+            .map_err(|err| Error::DBRecordEmpty(err.to_string()))?;
 
         Ok(articles)
     }
@@ -106,5 +100,23 @@ impl Database {
         );
 
         Ok(article)
+    }
+
+    pub async fn update_article_uri(&self, article_id: &Thing, uri: &str) -> Result<(), Error> {
+        let changes: Vec<OpChanges<String>> = self
+            .client
+            .update((article_id.tb.clone(), article_id.id.clone()))
+            .patch(PatchOp::replace("/article_uri", uri))
+            .await
+            .map_err(|err| {
+                Error::DBCouldNotUpdateRecord(article_id.to_string(), err.to_string())
+            })?;
+
+        log::debug!(
+            "Successfully updated article with id: `{}`, changes: {:?}",
+            &article_id,
+            changes
+        );
+        Ok(())
     }
 }

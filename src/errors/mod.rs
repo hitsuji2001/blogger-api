@@ -19,6 +19,7 @@ pub enum Error {
     DBCouldNotDeleteRecord(String, String),
     DBCouldNotUpdateRecord(String, String),
     DBCouldNotCreateEvent(String),
+    DBRecordEmpty(String),
     DBDuplicateUserEmail,
 
     ParseEnvFailedWrongFormat(String),
@@ -84,6 +85,10 @@ impl IntoResponse for Error {
                     .to_string(),
                 "".to_string(),
             ),
+            Error::DBRecordEmpty(error) => {
+                status_code = StatusCode::NOT_FOUND;
+                ("Could not find selected record".to_string(), error)
+            }
             Error::ParseEnvFailedWrongFormat(error) => {
                 ("Could not parse env file.".to_string(), error)
             }
@@ -142,7 +147,7 @@ impl IntoResponse for Error {
             }
             Error::JWTTokenError(error) => ("Invalid JWT token".to_string(), error),
         };
-        log::error!("[ERROR]: {}.\n    --> Cause: {}", &message, &error);
+        log::error!("[ERROR]: {}. Cause: {}", &message, &error);
         let body = Json(json!({
             "result": {
                 "success": false,

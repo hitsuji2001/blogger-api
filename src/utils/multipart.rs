@@ -1,10 +1,11 @@
 use crate::errors::Error;
-use crate::models::{article::ArticleForCreate, user::UserForCreate};
+use crate::models::{article::ArticleForCreate, comment::CommentForCreate, user::UserForCreate};
 use crate::s3;
 use crate::server::context::Context;
 use crate::utils::image::{Image, ImageType};
 
 use axum::{body::Bytes, extract::Multipart};
+use surrealdb::sql::Thing;
 
 pub async fn parse_article_for_update(
     mut payload: Multipart,
@@ -121,37 +122,28 @@ fn parse_string_from_u8(data: &Bytes) -> Result<String, Error> {
     Ok(result)
 }
 
-pub async fn upload_user_image_to_s3(
-    user: &UserForCreate,
-    base_folder: &str,
-) -> Result<String, Error> {
-    if let Some(avatar) = &user.avatar {
-        let file_name = format!(
-            "{}/{}.{}",
-            base_folder,
-            sha256::digest(format!(
-                "{}/{}",
-                avatar.file_name,
-                chrono::offset::Utc::now()
-            ))
-            .get(0..32)
-            .expect("Unreachable, SHA-256 should provide more than 32 chracter"),
-            avatar.file_type
-        );
-        log::info!("Uploading file: `{}` to s3.", &file_name);
-        s3::get_bucket()
-            .await?
-            .put_object(&file_name, &avatar.data)
-            .await
-            .map_err(|err| Error::MinioCouldNotPutObject(err.to_string()))?;
-        log::info!("Successfully uploaded file: `{}` to s3", &file_name);
+pub async fn upload_user_image_to_s3(base_folder: &str, image: &Image) -> Result<String, Error> {
+    let file_name = format!(
+        "{}/{}.{}",
+        base_folder,
+        sha256::digest(format!(
+            "{}/{}",
+            image.file_name,
+            chrono::offset::Utc::now()
+        ))
+        .get(0..32)
+        .expect("Unreachable, SHA-256 should provide more than 32 chracter"),
+        image.file_type
+    );
+    log::info!("Uploading file: `{}` to s3.", &file_name);
+    s3::get_bucket()
+        .await?
+        .put_object(&file_name, &image.data)
+        .await
+        .map_err(|err| Error::MinioCouldNotPutObject(err.to_string()))?;
+    log::info!("Successfully uploaded file: `{}` to s3", &file_name);
 
-        Ok(file_name)
-    } else {
-        Err(Error::ServerCouldNotParseForm(String::from(
-            "Unreachable, User avatar is null",
-        )))
-    }
+    Ok(file_name)
 }
 
 pub async fn parse_article_for_create(
@@ -213,4 +205,57 @@ pub async fn upload_html_to_s3(
         .map_err(|err| Error::MinioCouldNotPutObject(err.to_string()))?;
 
     Ok(file_name)
+}
+
+pub async fn parse_comment_for_create(
+    mut payload: Multipart,
+    context: &Context,
+    article_id: &Thing,
+) -> Result<CommentForCreate, Error> {
+    let mut comment = CommentForCreate::new();
+
+    comment.user_id = context.user_id.clone();
+    comment.article_id = article_id.clone();
+
+    while let Some(field) = payload
+        .next_field()
+        .await
+        .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
+    {
+        if let Some(field_name) = field.name() {
+            let name = field_name.to_string();
+            let file_type = field.content_type();
+            let file_name = field.file_name();
+
+            if name == "content" {
+                let data = field
+                    .bytes()
+                    .await
+                    .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?;
+                comment.content = Some(parse_string_from_u8(&data)?);
+            } else if name == "media" {
+                comment.image = Some(Image::new());
+                let mut image = comment
+                    .image
+                    .as_mut()
+                    .expect("Unreachable, comment media should be contructed by now");
+                if let Some(name) = file_name {
+                    image.file_name = name.to_string();
+                }
+                if let Some(file_type) = file_type {
+                    image.file_type = ImageType::from_str(file_type);
+                    if !image.is_supported_image_type() {
+                        return Err(Error::ServerUnsupportedMediaType(file_type.to_string()));
+                    }
+                }
+                image.data = field
+                    .bytes()
+                    .await
+                    .map_err(|err| Error::ServerCouldNotParseForm(err.to_string()))?
+                    .to_vec();
+            }
+        }
+    }
+
+    Ok(comment)
 }

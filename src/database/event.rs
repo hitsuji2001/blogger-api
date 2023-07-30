@@ -23,7 +23,7 @@ impl Database {
             .query(sql)
             .await
             .map_err(|err| Error::DBCouldNotCreateEvent(err.to_string()))?;
-        log::info!("Successfully create events: `on_create_article`");
+        log::info!("Successfully create event: `on_create_article`");
 
         Ok(())
     }
@@ -42,7 +42,7 @@ impl Database {
             .query(sql)
             .await
             .map_err(|err| Error::DBCouldNotCreateEvent(err.to_string()))?;
-        log::info!("Successfully create events: `on_create_comment`");
+        log::info!("Successfully create event: `on_create_comment`");
 
         Ok(())
     }

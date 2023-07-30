@@ -1,5 +1,4 @@
 use crate::database::user::USER_TBL_NAME;
-use crate::models::comment::Comment;
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -13,7 +12,7 @@ pub struct Article {
     pub public: bool,
     pub article_uri: String,
     pub tags: Option<String>,
-    pub comments: Option<Comment>,
+    pub comments: Option<Vec<Thing>>,
     pub liked_by: Option<Vec<Thing>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,

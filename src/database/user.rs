@@ -123,7 +123,7 @@ impl Database {
             .await
             .map_err(|err| Error::DBCouldNotSelectRecord(email.to_string(), err.to_string()))?
             .take(0)
-            .map_err(|err| Error::DBCouldNotSelectRecord(email.to_string(), err.to_string()))?;
+            .map_err(|err| Error::DBRecordEmpty(err.to_string()))?;
 
         if users.is_empty() {
             return Err(Error::DBCouldNotSelectRecord(
@@ -159,11 +159,11 @@ async fn filter_empty_field(
         updated_at: latest.updated_at,
     };
 
-    if current.avatar.is_some() {
+    if let Some(avatar) = &current.avatar {
         result.profile_pic_uri = Some(
             utils::multipart::upload_user_image_to_s3(
-                current,
                 format!("{}/{}", context.user_id, USER_PROFILE_FOLDER).as_str(),
+                avatar,
             )
             .await?,
         );

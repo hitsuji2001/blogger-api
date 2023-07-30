@@ -52,11 +52,8 @@ impl Database {
             .map_err(|error| {
                 Error::DBCouldNotConnectToNamespace(config.namespace.clone(), error.to_string())
             })?;
-        log::info!(
-            "Successfully connected to database with: {{ namespace: {}, database: {} }}",
-            &config.namespace,
-            &config.database
-        );
+        log::info!("Successfully connected to database");
+
         self.create_all_table().await?;
         self.create_events().await?;
 
