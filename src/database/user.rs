@@ -13,19 +13,21 @@ impl Database {
     pub async fn create_user_table(&self) -> Result<(), Error> {
         let sql = r#"
             DEFINE TABLE user SCHEMAFULL;
-            DEFINE FIELD username           ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD first_name         ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD last_name          ON TABLE user TYPE string   ASSERT $value != NONE;
-            DEFINE FIELD email              ON TABLE user TYPE string   ASSERT $value != NONE AND is::email($value);
+            DEFINE FIELD username           ON TABLE user TYPE string          ASSERT $value != NONE;
+            DEFINE FIELD first_name         ON TABLE user TYPE string          ASSERT $value != NONE;
+            DEFINE FIELD last_name          ON TABLE user TYPE string          ASSERT $value != NONE;
+            DEFINE FIELD email              ON TABLE user TYPE string          ASSERT $value != NONE AND is::email($value);
             DEFINE FIELD profile_pic_uri    ON TABLE user TYPE string;
-            DEFINE FIELD created_at         ON TABLE user TYPE datetime ASSERT $value != NONE;
-            DEFINE FIELD updated_at         ON TABLE user TYPE datetime;
-            DEFINE FIELD is_admin           ON TABLE user TYPE bool;
+            DEFINE FIELD created_at         ON TABLE user TYPE datetime        ASSERT $value != NONE;
+            DEFINE FIELD updated_at         ON TABLE user TYPE datetime;       
+            DEFINE FIELD deleted_at         ON TABLE user TYPE datetime;       
+            DEFINE FIELD is_admin           ON TABLE user TYPE bool            ASSERT $value != NONE;
+            DEFINE FIELD deleted            ON TABLE user TYPE bool            ASSERT $value != NONE;
             DEFINE FIELD articles           ON TABLE user TYPE array;
             DEFINE FIELD articles.*         ON TABLE user TYPE record(article) ASSERT $value != NONE;
-            DEFINE INDEX article_index      ON TABLE user COLUMNS articles.* UNIQUE;
-            DEFINE INDEX username_index     ON TABLE user COLUMNS username UNIQUE;
-            DEFINE INDEX user_email_index   ON TABLE user COLUMNS email UNIQUE;
+            DEFINE INDEX article_index      ON TABLE user COLUMNS articles.*   UNIQUE;
+            DEFINE INDEX username_index     ON TABLE user COLUMNS username     UNIQUE;
+            DEFINE INDEX user_email_index   ON TABLE user COLUMNS email        UNIQUE;
         "#;
 
         self.client.query(sql).await.map_err(|err| {
@@ -76,18 +78,18 @@ impl Database {
         context: &Context,
         user: &UserForCreate,
     ) -> Result<(), Error> {
-        let latest_config = self.get_user_with_id(id).await?;
-        let current_info = filter_empty_field(user, &latest_config, context).await?;
+        let old_user = self.get_user_with_id(id).await?;
+        let new_user = filter_empty_field(user, &old_user, context).await?;
 
-        let changes: Vec<OpChanges<String>> = self
+        let changes: Vec<OpChanges> = self
             .client
             .update((id.tb.clone(), id.id.clone()))
-            .patch(PatchOp::replace("/updated_at", current_info.updated_at))
-            .patch(PatchOp::replace("/first_name", &current_info.first_name))
-            .patch(PatchOp::replace("/last_name", &current_info.last_name))
+            .patch(PatchOp::replace("/updated_at", new_user.updated_at))
+            .patch(PatchOp::replace("/first_name", &new_user.first_name))
+            .patch(PatchOp::replace("/last_name", &new_user.last_name))
             .patch(PatchOp::replace(
                 "/profile_pic_uri",
-                &current_info.profile_pic_uri,
+                &new_user.profile_pic_uri,
             ))
             .await
             .map_err(|err| Error::DBCouldNotUpdateRecord(id.to_string(), err.to_string()))?;
@@ -99,20 +101,21 @@ impl Database {
         Ok(())
     }
 
-    pub async fn delete_user_with_id(&self, id: &Thing) -> Result<User, Error> {
-        let user: User = self
+    pub async fn delete_user_with_id(&self, user: &Thing) -> Result<(), Error> {
+        let changes: Vec<OpChanges> = self
             .client
-            .delete((id.tb.clone(), id.id.clone()))
+            .update((user.tb.clone(), user.id.clone()))
+            .patch(PatchOp::replace("/deleted", true))
+            .patch(PatchOp::replace("/deleted_at", chrono::offset::Utc::now()))
             .await
-            .map_err(|err| Error::DBCouldNotDeleteRecord(id.to_string(), err.to_string()))?;
-
+            .map_err(|err| Error::DBCouldNotDeleteRecord(user.to_string(), err.to_string()))?;
         log::debug!(
-            "Successfully deleted user with: id `{}`. user: {:?}",
-            &id,
-            &user
+            "Successfully marked user with id: `{}` as deleted. Changes: {:?}",
+            user,
+            changes
         );
 
-        Ok(user)
+        Ok(())
     }
 
     pub async fn get_user_with_email(&self, email: &String) -> Result<User, Error> {
@@ -139,27 +142,30 @@ impl Database {
 }
 
 async fn filter_empty_field(
-    current: &UserForCreate,
-    latest: &User,
+    new_user: &UserForCreate,
+    old_user: &User,
     context: &Context,
 ) -> Result<UserForCreate, Error> {
-    if current.first_name.is_empty() && current.last_name.is_empty() && current.avatar.is_none() {
+    if new_user.first_name.is_empty() && new_user.last_name.is_empty() && new_user.avatar.is_none()
+    {
         return Err(Error::ServerEmptyFormFromUser);
     }
 
     let mut result = UserForCreate {
-        first_name: latest.first_name.clone(),
-        last_name: latest.last_name.clone(),
+        first_name: old_user.first_name.clone(),
+        last_name: old_user.last_name.clone(),
         username: Default::default(),
         email: Default::default(),
-        is_admin: latest.is_admin,
+        is_admin: old_user.is_admin,
+        deleted: old_user.deleted,
         avatar: Default::default(),
-        profile_pic_uri: latest.profile_pic_uri.clone(),
-        created_at: latest.created_at,
-        updated_at: latest.updated_at,
+        profile_pic_uri: old_user.profile_pic_uri.clone(),
+        created_at: old_user.created_at,
+        updated_at: old_user.updated_at,
+        deleted_at: old_user.deleted_at,
     };
 
-    if let Some(avatar) = &current.avatar {
+    if let Some(avatar) = &new_user.avatar {
         result.profile_pic_uri = Some(
             utils::multipart::upload_user_image_to_s3(
                 format!("{}/{}", context.user_id, USER_PROFILE_FOLDER).as_str(),
@@ -169,11 +175,11 @@ async fn filter_empty_field(
         );
     };
 
-    if !current.first_name.is_empty() {
-        result.first_name = current.first_name.clone();
+    if !new_user.first_name.is_empty() {
+        result.first_name = new_user.first_name.clone();
     }
-    if !current.last_name.is_empty() {
-        result.last_name = current.last_name.clone();
+    if !new_user.last_name.is_empty() {
+        result.last_name = new_user.last_name.clone();
     }
 
     result.updated_at = Some(chrono::offset::Utc::now());

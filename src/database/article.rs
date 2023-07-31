@@ -103,7 +103,7 @@ impl Database {
     }
 
     pub async fn update_article_uri(&self, article_id: &Thing, uri: &str) -> Result<(), Error> {
-        let changes: Vec<OpChanges<String>> = self
+        let changes: Vec<OpChanges> = self
             .client
             .update((article_id.tb.clone(), article_id.id.clone()))
             .patch(PatchOp::replace("/article_uri", uri))

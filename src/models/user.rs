@@ -13,9 +13,11 @@ pub struct User {
     pub last_name: String,
     pub email: String,
     pub is_admin: bool,
+    pub deleted: bool,
     pub profile_pic_uri: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 // TODO: Add password to `UserForCreate` and a way to validate password
@@ -26,10 +28,12 @@ pub struct UserForCreate {
     pub username: String,
     pub email: String,
     pub is_admin: bool,
+    pub deleted: bool,
     pub avatar: Option<Image>,
     pub profile_pic_uri: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 impl UserForCreate {
@@ -40,10 +44,12 @@ impl UserForCreate {
             username: Default::default(),
             email: Default::default(),
             is_admin: false,
+            deleted: false,
             avatar: Default::default(),
             profile_pic_uri: Default::default(),
             created_at: Default::default(),
             updated_at: Default::default(),
+            deleted_at: Default::default(),
         }
     }
 }

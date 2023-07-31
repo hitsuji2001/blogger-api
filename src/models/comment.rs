@@ -16,6 +16,7 @@ pub struct Comment {
     pub liked_by: Option<Vec<Thing>>,
     pub created_at: DateTime<Utc>,
     pub updated_at: Option<DateTime<Utc>>,
+    pub deleted_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]

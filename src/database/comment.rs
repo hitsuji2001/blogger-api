@@ -18,12 +18,13 @@ impl Database {
             DEFINE FIELD reply                   ON TABLE comment TYPE array;
             DEFINE FIELD reply.*                 ON TABLE comment TYPE record(comment)   ASSERT $value != NONE;
             DEFINE FIELD content                 ON TABLE comment TYPE string;
-            DEFINE FIELD deleted                 ON TABLE comment TYPE bool;
+            DEFINE FIELD deleted                 ON TABLE comment TYPE bool              ASSERT $value != NONE;
             DEFINE FIELD media_uri               ON TABLE comment TYPE string;
             DEFINE FIELD liked_by                ON TABLE comment TYPE array;
             DEFINE FIELD liked_by.*              ON TABLE comment TYPE record(user)      ASSERT $value != NONE;
             DEFINE FIELD created_at              ON TABLE comment TYPE datetime          ASSERT $value != NONE;
             DEFINE FIELD updated_at              ON TABLE comment TYPE datetime;
+            DEFINE FIELD deleted_at              ON TABLE comment TYPE datetime;
         "#;
 
         self.client.query(sql).await.map_err(|err| {
@@ -77,7 +78,7 @@ impl Database {
             self.update_comment_uri(&id, &uri).await?;
         }
 
-        let changes: Vec<OpChanges<Thing>> = self
+        let changes: Vec<OpChanges> = self
             .client
             .update((comment_id.tb.clone(), comment_id.id.clone()))
             .patch(PatchOp::add("/reply", [id.clone()]))
@@ -93,7 +94,7 @@ impl Database {
     }
 
     pub async fn update_comment_uri(&self, comment: &Thing, uri: &String) -> Result<(), Error> {
-        let changes: Vec<OpChanges<String>> = self
+        let changes: Vec<OpChanges> = self
             .client
             .update((comment.tb.clone(), comment.id.clone()))
             .patch(PatchOp::replace("/media_uri", uri))
@@ -119,10 +120,11 @@ impl Database {
     }
 
     pub async fn delete_comment(&self, comment: &Thing) -> Result<(), Error> {
-        let changes: Vec<OpChanges<String>> = self
+        let changes: Vec<OpChanges> = self
             .client
             .update((comment.tb.clone(), comment.id.clone()))
-            .patch(PatchOp::replace("/deleted", "true"))
+            .patch(PatchOp::replace("/deleted", true))
+            .patch(PatchOp::replace("/deleted_at", chrono::offset::Utc::now()))
             .await
             .map_err(|err| Error::DBCouldNotDeleteRecord(comment.to_string(), err.to_string()))?;
         log::debug!(
@@ -159,6 +161,35 @@ impl Database {
         Ok(reply)
     }
 
+    pub async fn update_comment(
+        &self,
+        old_comment: &Comment,
+        new_comment: &mut CommentForCreate,
+    ) -> Result<(), Error> {
+        let current_info = filter_empty_field(old_comment, new_comment).await?;
+        let changes: Vec<OpChanges> = self
+            .client
+            .update((old_comment.id.tb.clone(), old_comment.id.id.clone()))
+            .patch(PatchOp::replace("/content", current_info.content.clone()))
+            .patch(PatchOp::replace(
+                "/media_uri",
+                current_info.media_uri.clone(),
+            ))
+            .patch(PatchOp::replace("/updated_at", current_info.updated_at))
+            .patch(PatchOp::replace("/deleted", current_info.deleted))
+            .await
+            .map_err(|err| {
+                Error::DBCouldNotUpdateRecord(old_comment.id.to_string(), err.to_string())
+            })?;
+        log::debug!(
+            "Successfully create reply for comment: {}. Changes: {:?}",
+            old_comment.id,
+            changes
+        );
+
+        Ok(())
+    }
+
     pub async fn get_comment_for_article(&self, article: &Thing) -> Result<Vec<Comment>, Error> {
         let sql = format!(
             "SELECT * FROM comment WHERE (SELECT comments FROM article WHERE id = {})",
@@ -174,4 +205,41 @@ impl Database {
 
         Ok(comments)
     }
+}
+
+async fn filter_empty_field<'a>(
+    old_comment: &Comment,
+    new_comment: &'a mut CommentForCreate,
+) -> Result<&'a mut CommentForCreate, Error> {
+    if new_comment.content.is_none() && new_comment.image.is_none() {
+        return Err(Error::ServerEmptyFormFromUser);
+    }
+
+    if let Some(content) = &new_comment.content {
+        if content.is_empty() {
+            new_comment.content = old_comment.content.clone();
+        }
+    } else if new_comment.content.is_none() {
+        new_comment.content = old_comment.content.clone();
+    }
+
+    if let Some(media) = &new_comment.image {
+        let uri = utils::multipart::upload_user_image_to_s3(
+            format!(
+                "{}/{}/{}/{}",
+                old_comment.user_id, ARTICLE_FOLDER, old_comment.article_id, COMMENT_FOLDER
+            )
+            .as_str(),
+            media,
+        )
+        .await?;
+
+        new_comment.media_uri = Some(uri);
+    } else {
+        new_comment.media_uri = old_comment.media_uri.clone();
+    }
+
+    new_comment.updated_at = Some(chrono::offset::Utc::now());
+
+    Ok(new_comment)
 }

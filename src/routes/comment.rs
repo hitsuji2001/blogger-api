@@ -167,8 +167,31 @@ async fn create_reply(
     Ok(res)
 }
 
-async fn update_comment() -> Result<Response, Error> {
-    todo!();
+async fn update_comment(
+    context: Context,
+    State(database): State<Arc<Database>>,
+    Path(comment_id): Path<String>,
+    payload: Multipart,
+) -> Result<Response, Error> {
+    let comment_id = Thing::from((COMMENT_TBL_NAME, comment_id.as_str()));
+    let old_comment = database.get_comment(&comment_id).await?;
+    context.check_permissions(Some(old_comment.user_id.clone()), false)?;
+
+    let mut new_comment =
+        utils::multipart::parse_comment_for_create(payload, &context, &old_comment.article_id)
+            .await?;
+    database
+        .update_comment(&old_comment, &mut new_comment)
+        .await?;
+    let body = Json(json!({
+        "result": {
+            "success": true,
+            "message": "Successfully update comment"
+        },
+    }));
+    let res = (StatusCode::OK, body).into_response();
+
+    Ok(res)
 }
 
 async fn delete_comment(

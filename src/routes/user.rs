@@ -122,15 +122,14 @@ async fn delete_user(
     let id = Thing::from((USER_TBL_NAME, id.as_str()));
     context.check_permissions(Some(id.clone()), false)?;
 
-    let user = database.delete_user_with_id(&id).await?;
+    database.delete_user_with_id(&id).await?;
     let body = Json(json!({
         "result": {
             "success": true,
             "message": "Successfully delete user.",
         },
-        "user": user
     }));
-    let res = (StatusCode::OK, body).into_response();
+    let res = (StatusCode::ACCEPTED, body).into_response();
 
     Ok(res)
 }
