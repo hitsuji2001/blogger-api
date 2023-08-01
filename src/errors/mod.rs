@@ -18,8 +18,12 @@ pub enum Error {
     DBCouldNotSelectRecord(String, String),
     DBCouldNotDeleteRecord(String, String),
     DBCouldNotUpdateRecord(String, String),
+    DBCouldNotRelateRecord(String, String, String),
+    DBCouldNotDeleteRelateRecord(String, String, String),
     DBCouldNotCreateEvent(String),
+    DBRecordAlreadyExist(String, String),
     DBRecordEmpty(String),
+    DBRecordDidNotExist(String),
     DBDuplicateUserEmail,
 
     ParseEnvFailedWrongFormat(String),
@@ -79,7 +83,25 @@ impl IntoResponse for Error {
                 status_code = StatusCode::NOT_FOUND;
                 (format!("Could not update record with id: `{}`", id), error)
             }
+            Error::DBCouldNotRelateRecord(id1, id2, error) => (
+                format!(
+                    "Could not relate record with id: `{}` to id: `{}`",
+                    id1, id2
+                ),
+                error,
+            ),
+            Error::DBCouldNotDeleteRelateRecord(id1, id2, error) => (
+                format!(
+                    "Could not delete relation from record with id: `{}` to id: `{}`",
+                    id1, id2
+                ),
+                error,
+            ),
             Error::DBCouldNotCreateEvent(error) => ("Could not create event".to_string(), error),
+            Error::DBRecordAlreadyExist(id, error) => {
+                status_code = StatusCode::CONFLICT;
+                (format!("Record with id: `{}` already exists", id), error)
+            }
             Error::DBDuplicateUserEmail => (
                 "Unreachable, there should not be more than one user with the same email"
                     .to_string(),
@@ -88,6 +110,10 @@ impl IntoResponse for Error {
             Error::DBRecordEmpty(error) => {
                 status_code = StatusCode::NOT_FOUND;
                 ("Could not find selected record".to_string(), error)
+            }
+            Error::DBRecordDidNotExist(id) => {
+                status_code = StatusCode::NOT_FOUND;
+                (format!("Could not find record: `{}`", id), "".to_string())
             }
             Error::ParseEnvFailedWrongFormat(error) => {
                 ("Could not parse env file.".to_string(), error)

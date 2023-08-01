@@ -2,6 +2,7 @@ pub mod article;
 pub mod comment;
 pub mod config;
 pub mod event;
+pub mod like;
 pub mod user;
 
 use crate::database::config::DatabaseConfig;
@@ -64,6 +65,7 @@ impl Database {
         self.create_user_table().await?;
         self.create_comment_table().await?;
         self.create_article_table().await?;
+        self.create_like_table().await?;
 
         Ok(())
     }

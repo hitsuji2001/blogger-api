@@ -25,6 +25,7 @@ impl Database {
             DEFINE FIELD created_at              ON TABLE comment TYPE datetime          ASSERT $value != NONE;
             DEFINE FIELD updated_at              ON TABLE comment TYPE datetime;
             DEFINE FIELD deleted_at              ON TABLE comment TYPE datetime;
+            DEFINE INDEX liked_by_index          ON TABLE comment COLUMNS liked_by       UNIQUE;
         "#;
 
         self.client.query(sql).await.map_err(|err| {

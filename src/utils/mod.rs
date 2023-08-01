@@ -11,6 +11,7 @@ pub enum OpChangesValue {
     Bool(bool),
     Datetime(DateTime<Utc>),
     Id(Thing),
+    VecId(Vec<Thing>),
     Text(String),
 }
 
@@ -19,5 +20,5 @@ pub enum OpChangesValue {
 pub struct OpChanges {
     op: String,
     path: String,
-    value: OpChangesValue,
+    value: Option<OpChangesValue>,
 }
